@@ -18,7 +18,7 @@ class GameEngine {
         this.players = {};
 
         // Server Connection
-        this.socket = io(`http://${window.location.hostname}:3000`);
+        this.socket = io(`https://warzone-battlefield.onrender.com`);
 
         // Use Modular Engines
         this.scene = sceneManager.scene;
