@@ -51,56 +51,118 @@ export default class Rifle {
     createMesh() {
         this.mesh = new THREE.Group();
 
-        const gunMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.5, roughness: 0.4 });
-        const plasticMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+        const gunMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.3 });
+        const plasticMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+        const railMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.6, roughness: 0.6 });
+        const lensMat = new THREE.MeshStandardMaterial({ color: 0x1122AA, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.8 });
 
-        // 1. Receiver (Main Body)
-        const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.4), gunMat);
-        this.mesh.add(receiver);
+        // 1. Lower Receiver
+        const lowerReceiver = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.25), gunMat);
+        lowerReceiver.position.set(0, -0.02, 0);
+        this.mesh.add(lowerReceiver);
 
-        // 2. Handguard (Barrel Shroud)
-        const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.3), gunMat);
-        handguard.position.z = -0.35;
+        // 2. Upper Receiver
+        const upperReceiver = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.06, 0.26), gunMat);
+        upperReceiver.position.set(0, 0.05, 0);
+        this.mesh.add(upperReceiver);
+
+        // 3. Handguard / Rail System
+        const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.055, 0.35), railMat);
+        handguard.position.set(0, 0.045, -0.3);
         this.mesh.add(handguard);
 
-        // 3. Barrel & Suppressor
-        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.2), gunMat);
+        // Side Rails
+        for (let i = 0; i < 2; i++) {
+            const sideRail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.01, 0.3), railMat);
+            sideRail.position.set(0, 0.045, -0.3);
+            this.mesh.add(sideRail);
+        }
+
+        // 4. Barrel
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.4), gunMat);
         barrel.rotation.x = Math.PI / 2;
-        barrel.position.z = -0.6;
+        barrel.position.set(0, 0.045, -0.55);
         this.mesh.add(barrel);
 
-        // 4. Magazine (Curved)
-        const mag = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.18, 0.08), plasticMat);
-        mag.position.set(0, -0.12, -0.1);
-        mag.rotation.x = 0.2;
+        // 5. Suppressor
+        const suppressor = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.18), plasticMat);
+        suppressor.rotation.x = Math.PI / 2;
+        suppressor.position.set(0, 0.045, -0.75);
+        this.mesh.add(suppressor);
+
+        // 6. Magazine
+        const mag = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.16, 0.07), plasticMat);
+        mag.position.set(0, -0.12, -0.08);
+        mag.rotation.x = 0.15;
         this.mesh.add(mag);
 
-        // 5. Pistol Grip
-        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.12, 0.06), plasticMat);
-        grip.position.set(0, -0.1, 0.1);
-        grip.rotation.x = -0.3;
+        // Magazine details (lines)
+        const magDetail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, 0.05), plasticMat);
+        magDetail.position.set(0, -0.12, -0.08);
+        magDetail.rotation.x = 0.15;
+        this.mesh.add(magDetail);
+
+        // 7. Pistol Grip (Ergonomic)
+        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.055), plasticMat);
+        grip.position.set(0, -0.1, 0.08);
+        grip.rotation.x = -0.25;
         this.mesh.add(grip);
 
-        // 6. Stock
-        const stock = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.2), plasticMat);
-        stock.position.set(0, 0.02, 0.3);
-        this.mesh.add(stock);
+        const gripBase = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.02, 0.06), plasticMat);
+        gripBase.position.set(0, -0.16, 0.095);
+        gripBase.rotation.x = -0.25;
+        this.mesh.add(gripBase);
 
-        // 7. Sights (Iron Sights)
-        const frontSight = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.04, 0.01), gunMat);
-        frontSight.position.set(0, 0.06, -0.45);
-        this.mesh.add(frontSight);
+        // 8. Tactical Stock
+        const stockTube = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.2), gunMat);
+        stockTube.rotation.x = Math.PI / 2;
+        stockTube.position.set(0, 0.03, 0.22);
+        this.mesh.add(stockTube);
 
-        const rearSight = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.01), gunMat);
-        rearSight.position.set(0, 0.06, 0.15);
-        this.mesh.add(rearSight);
+        const stockBody = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.12, 0.15), plasticMat);
+        stockBody.position.set(0, -0.01, 0.3);
+        this.mesh.add(stockBody);
+
+        const stockPad = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.02), new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1.0 }));
+        stockPad.position.set(0, -0.01, 0.38);
+        this.mesh.add(stockPad);
+
+        // 9. ACOG Optic Scope
+        const scopeBase = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.02, 0.08), railMat);
+        scopeBase.position.set(0, 0.09, -0.05);
+        this.mesh.add(scopeBase);
+
+        const scopeBody = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.018, 0.12), gunMat);
+        scopeBody.rotation.x = Math.PI / 2;
+        scopeBody.position.set(0, 0.115, -0.05);
+        this.mesh.add(scopeBody);
+
+        const scopeFront = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.022, 0.04), gunMat);
+        scopeFront.rotation.x = Math.PI / 2;
+        scopeFront.position.set(0, 0.115, -0.13);
+        this.mesh.add(scopeFront);
+
+        // Glass lenses
+        const lensBack = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.005), lensMat);
+        lensBack.rotation.x = Math.PI / 2;
+        lensBack.position.set(0, 0.115, 0.01);
+        this.mesh.add(lensBack);
+
+        const lensFront = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.005), lensMat);
+        lensFront.rotation.x = Math.PI / 2;
+        lensFront.position.set(0, 0.115, -0.15);
+        this.mesh.add(lensFront);
 
         // Final Mesh positioning in camera view
+        // Move aiming position so the scope aligns with the camera center
+        this.aimPosition = new THREE.Vector3(0, -0.115, -0.25);
+        this.basePosition = new THREE.Vector3(0.25, -0.25, -0.5);
+
         this.mesh.position.copy(this.basePosition);
         this.camera.add(this.mesh);
 
         this.muzzlePos = new THREE.Object3D();
-        this.muzzlePos.position.set(0, 0, -0.7);
+        this.muzzlePos.position.set(0, 0.045, -0.85); // End of suppressor
         this.mesh.add(this.muzzlePos);
     }
 

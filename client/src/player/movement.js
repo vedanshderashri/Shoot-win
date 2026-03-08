@@ -53,7 +53,7 @@ export default class Movement {
         inputVector.normalize();
         inputVector.applyQuaternion(this.yawObject.quaternion);
 
-        let isSprintKey = this.controls.keys.shift && !this.isCrouching;
+        let isSprintKey = this.controls.keys.shift && !this.isCrouching && isGrounded;
 
         if (isSprintKey && inputVector.length() > 0 && this.stamina > 0) {
             this.stamina -= dt * 20;

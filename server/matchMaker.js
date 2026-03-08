@@ -120,6 +120,12 @@ function initNetworking(io) {
             socket.emit('scores_update', playerManager.getScoresInRoom(socket.roomCode));
         });
 
+        // Grenades — scoped to room
+        socket.on('player_throw_grenade', (data) => {
+            if (!socket.roomCode) return;
+            socket.to(socket.roomCode).emit('player_throw_grenade', data);
+        });
+
         // Disconnect
         socket.on('disconnect', () => {
             console.log(`Player disconnected: ${socket.id}`);

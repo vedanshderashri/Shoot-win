@@ -146,9 +146,13 @@ class GameEngine {
                 }
             }
         });
-    }
 
-    update(dt) {
+        this.socket.on('player_throw_grenade', (data) => {
+            if (this.weaponSystem) {
+                this.weaponSystem.syncRemoteGrenade(data);
+            }
+        });
+    } update(dt) {
         const now = performance.now();
         for (let id in this.players) {
             const p = this.players[id];
