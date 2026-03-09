@@ -152,6 +152,12 @@ class GameEngine {
                 this.weaponSystem.syncRemoteGrenade(data);
             }
         });
+
+        this.socket.on('game_over', (data) => {
+            if (this.callbacks.onGameOver) {
+                this.callbacks.onGameOver(data);
+            }
+        });
     } update(dt) {
         const now = performance.now();
         for (let id in this.players) {

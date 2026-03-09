@@ -8,6 +8,7 @@ function App() {
     const [roomCode, setRoomCode] = useState('');
     const [joinCode, setJoinCode] = useState('');
     const [joinError, setJoinError] = useState('');
+    const [winnerData, setWinnerData] = useState(null);
 
     const [health, setHealth] = useState(100);
     const [stamina, setStamina] = useState(100);
@@ -37,7 +38,8 @@ function App() {
         onHitmarker: (headshot) => { setIsHeadshot(headshot); setShowHitmarker(true); setTimeout(() => setShowHitmarker(false), 200); },
         onStaminaChange: (s) => setStamina(s),
         onKillFeed: (msg) => displayKillFeed(msg),
-        onScoresUpdate: (s) => setScores(s)
+        onScoresUpdate: (s) => setScores(s),
+        onGameOver: (data) => { setWinnerData(data); setScreen('gameover'); document.exitPointerLock(); }
     };
 
     const startGame = (code) => { setRoomCode(code); setScreen('playing'); };
@@ -299,6 +301,70 @@ function App() {
 
                     {/* Scoreboard overlay */}
                     <Scoreboard visible={showScoreboard} players={scores.length > 0 ? scores : [{ name: playerName || 'You', kills, deaths }]} />
+                </div>
+            )}
+            {/* ───────── GAME OVER SCREEN ───────── */}
+            {screen === 'gameover' && (
+                <div className="lobby-wrapper game-over-screen">
+                    <div className="lobby-bg">
+                        <div className="scanlines"></div>
+                        <div className="vignette" style={{ background: 'radial-gradient(circle, transparent 20%, rgba(0,0,0,0.9) 100%)' }}></div>
+                    </div>
+
+                    <div className="lobby-center">
+                        <div className="game-logo">
+                            <div className="logo-tag" style={{ color: '#ff9800' }}>OPERATION CONCLUDED</div>
+                            <h1 className="logo-title">MISSION END</h1>
+                            <div className="logo-subtitle">RECAPITULATION OF ENGAGEMENT</div>
+                        </div>
+
+                        <div className="winner-announcement">
+                            <div className="winner-label">TOP OPERATOR</div>
+                            <div className="winner-name">{winnerData?.winnerName}</div>
+                            <div className="winner-sub">TOTAL ELIMINATIONS: 20</div>
+                        </div>
+
+                        <div className="mil-card stats-card">
+                            <div className="mil-card-header">FINAL INTEL</div>
+                            <div className="final-stats-grid">
+                                <div className="final-stat">
+                                    <span className="fs-label">YOUR KILLS</span>
+                                    <span className="fs-val">{kills}</span>
+                                </div>
+                                <div className="final-stat">
+                                    <span className="fs-label">YOUR DEATHS</span>
+                                    <span className="fs-val">{deaths}</span>
+                                </div>
+                                <div className="final-stat">
+                                    <span className="fs-label">FINAL K/D</span>
+                                    <span className="fs-val">{kd}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mil-buttons">
+                            <button className="mil-btn mil-btn-primary" onClick={() => {
+                                // Simple re-match: re-join the same room
+                                setScreen('playing');
+                                setKills(0);
+                                setDeaths(0);
+                                setHealth(100);
+                                // The server will reset the player state on respawn/re-join logic
+                                // However, for a clean sweep, we might want to tell the server.
+                                // For now, let's keep it simple as requested.
+                            }}>
+                                <span className="btn-icon">↺</span>
+                                <span>RE-MATCH</span>
+                            </button>
+                            <button className="mil-btn mil-btn-secondary" onClick={() => {
+                                gameEngine.cleanup();
+                                window.location.reload(); // Hard reset for exit
+                            }}>
+                                <span className="btn-icon">✖</span>
+                                <span>EXIT TO MAIN</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

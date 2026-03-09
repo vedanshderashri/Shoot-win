@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
-const PLAYER_SPEED = 15;
-const SPRINT_SPEED = 25;
+const PLAYER_SPEED = 10;
+const SPRINT_SPEED = 16;
 const CROUCH_SPEED = 5;
 const JUMP_VELOCITY = 4; // Reduced from 8
 
