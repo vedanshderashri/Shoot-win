@@ -7,40 +7,44 @@ import * as CANNON from 'cannon-es';
 
 // ─── Procedural Textures ────────────────────────────────────
 
-function createConcreteTexture(baseColor = '#5a5042') {
+function createConcreteTexture(baseColor = '#606468') {
     const canvas = document.createElement('canvas');
     canvas.width = 512; canvas.height = 512;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = baseColor;
+
+    // Smooth gradient base instead of flat color
+    const grad = ctx.createLinearGradient(0, 0, 512, 512);
+    grad.addColorStop(0, '#6a6e73');
+    grad.addColorStop(1, '#505458');
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 512, 512);
-    // Noise overlay
-    for (let i = 0; i < 12000; i++) {
+
+    // Subtle soft smudges instead of sharp noise
+    for (let i = 0; i < 400; i++) {
         const x = Math.random() * 512, y = Math.random() * 512;
-        const g = Math.floor(Math.random() * 60);
-        ctx.fillStyle = `rgba(${g},${g},${g},0.25)`;
-        ctx.fillRect(x, y, 2, 2);
+        const r = 5 + Math.random() * 20;
+        const sGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        sGrad.addColorStop(0, 'rgba(0,0,0,0.06)');
+        sGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = sGrad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
     }
-    // Cracks
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 14; i++) {
+
+    // A few subtle cracks
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
         ctx.beginPath();
         let cx = Math.random() * 512, cy = Math.random() * 512;
         ctx.moveTo(cx, cy);
-        for (let s = 0; s < 8; s++) {
-            cx += (Math.random() - 0.5) * 40;
-            cy += Math.random() * 25;
+        for (let s = 0; s < 5; s++) {
+            cx += (Math.random() - 0.5) * 50;
+            cy += Math.random() * 30;
             ctx.lineTo(cx, cy);
         }
         ctx.stroke();
-    }
-    // Bullet holes
-    for (let i = 0; i < 20; i++) {
-        const x = Math.random() * 512, y = Math.random() * 512;
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        ctx.beginPath();
-        ctx.arc(x, y, 2 + Math.random() * 4, 0, Math.PI * 2);
-        ctx.fill();
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -51,27 +55,40 @@ function createGroundTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 512; canvas.height = 512;
     const ctx = canvas.getContext('2d');
-    // Dusty tan-grey ground
-    ctx.fillStyle = '#7a6a50';
+
+    // Smooth, realistic ground base
+    const grad = ctx.createLinearGradient(0, 0, 512, 512);
+    grad.addColorStop(0, '#857865');
+    grad.addColorStop(1, '#685d4c');
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 18000; i++) {
+
+    // Soft sand/dirt patches rather than noisy pixels
+    for (let i = 0; i < 200; i++) {
         const x = Math.random() * 512, y = Math.random() * 512;
-        const g = 60 + Math.random() * 80;
-        ctx.fillStyle = `rgba(${g + 10},${g},${g - 10},0.2)`;
-        ctx.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2);
-    }
-    // Dried blood pools
-    const bloods = [[100, 120], [300, 200], [430, 350], [160, 420], [240, 90], [380, 450]];
-    for (const [bx, by] of bloods) {
-        const grad = ctx.createRadialGradient(bx, by, 0, bx, by, 22 + Math.random() * 25);
-        grad.addColorStop(0, 'rgba(100, 0, 0, 0.9)');
-        grad.addColorStop(0.5, 'rgba(70, 0, 0, 0.6)');
-        grad.addColorStop(1, 'rgba(40, 0, 0, 0)');
-        ctx.fillStyle = grad;
+        const r = 10 + Math.random() * 40;
+        const sGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        sGrad.addColorStop(0, 'rgba(0,0,0,0.05)');
+        sGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = sGrad;
         ctx.beginPath();
-        ctx.ellipse(bx, by, 20 + Math.random() * 20, 12 + Math.random() * 15, Math.random() * Math.PI, 0, Math.PI * 2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
     }
+
+    // Soft subtle highlights
+    for (let i = 0; i < 100; i++) {
+        const x = Math.random() * 512, y = Math.random() * 512;
+        const r = 5 + Math.random() * 25;
+        const hGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        hGrad.addColorStop(0, 'rgba(255,255,255,0.03)');
+        hGrad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = hGrad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(12, 12);
@@ -82,17 +99,25 @@ function createRubbleTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 256; canvas.height = 256;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#6b5f4e';
+    
+    // Smooth rubble base
+    const grad = ctx.createLinearGradient(0, 0, 256, 256);
+    grad.addColorStop(0, '#756c60');
+    grad.addColorStop(1, '#554c40');
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 80; i++) {
+
+    // Soft shaded blocks instead of sharp flat rectangles
+    for (let i = 0; i < 40; i++) {
         const x = Math.random() * 256, y = Math.random() * 256;
-        const s = 5 + Math.random() * 18;
-        const c = 60 + Math.random() * 80;
-        ctx.fillStyle = `rgb(${c},${c - 10},${c - 20})`;
-        ctx.save(); ctx.translate(x, y);
-        ctx.rotate(Math.random() * Math.PI);
-        ctx.fillRect(-s / 2, -s / 2, s, s * 0.6);
-        ctx.restore();
+        const r = 8 + Math.random() * 15;
+        const bGrad = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+        bGrad.addColorStop(0, 'rgba(255,255,255,0.08)');
+        bGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
+        ctx.fillStyle = bGrad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -520,25 +545,7 @@ export function buildWarzoneMap(scene, world, physicsMaterial) {
     const embers = new THREE.Points(emberGeo, emberMat);
     scene.add(embers);
 
-    // ── BARBED WIRE COILS ────────────────────────────
-    const barbedMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.8, roughness: 0.4 });
-    const barbedPositions = [
-        [-18, 2.5, -2], [25, 2.5, -8], [-10, 1.5, 15], [15, 1.8, -15],
-        [0, 1.5, -20], [-5, 2, 25], [30, 1.5, 20]
-    ];
-    barbedPositions.forEach(([bx, by, bz]) => {
-        const coil = new THREE.Mesh(
-            new THREE.TorusGeometry(0.4 + Math.random() * 0.3, 0.03, 8, 20),
-            barbedMat
-        );
-        coil.position.set(bx, by, bz);
-        coil.rotation.x = Math.random() * Math.PI;
-        coil.rotation.z = Math.random() * Math.PI;
-        coil.castShadow = true;
-        coil.name = 'env';
-        scene.add(coil);
-    });
-
+    // (Removed Barbed Wire Coils)
     // ── BROKEN STREET LAMPS ──────────────────────────
     const lampPosts = [];
     const lampPostPositions = [[-15, -25], [20, 15], [-25, 25], [15, -10]];
