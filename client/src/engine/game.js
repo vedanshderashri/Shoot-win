@@ -56,9 +56,9 @@ class GameEngine {
 
         this.clock = new THREE.Clock();
 
-        // ── Random Map Selection ──
-        const maps = ['warzone', 'desert', 'cqb', 'arctic'];
-        const selectedMap = maps[Math.floor(Math.random() * maps.length)];
+        // ── Map Selection ──
+        // Defaulting to the original Warzone map as requested.
+        const selectedMap = 'warzone'; // Options: 'warzone', 'desert', 'cqb', 'arctic'
         console.log(`[Map] Loading map: ${selectedMap.toUpperCase()}`);
 
         this.animateMap = null; // Generic map animate function
