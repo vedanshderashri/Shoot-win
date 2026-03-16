@@ -930,6 +930,43 @@ html {
   margin-top: 2px;
 }
 
+/* Grenade HUD */
+.grenade-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 4px 0;
+  border-top: 1px solid var(--mil-border);
+}
+
+.grenade-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.grenade-pips {
+  display: flex;
+  gap: 6px;
+}
+
+.grenade-pip {
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.grenade-pip.full {
+  color: #ff8c00;
+  text-shadow: 0 0 6px rgba(255, 140, 0, 0.6);
+}
+
+.grenade-pip.empty {
+  color: rgba(255, 255, 255, 0.12);
+  text-shadow: none;
+}
+
 /* ─ Kill Feed ─ */
 .kill-feed {
   position: absolute;

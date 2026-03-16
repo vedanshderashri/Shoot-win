@@ -13,6 +13,7 @@ function App() {
     const [health, setHealth] = useState(100);
     const [stamina, setStamina] = useState(100);
     const [ammo, setAmmo] = useState(30);
+    const [grenades, setGrenades] = useState(3);
     const [kills, setKills] = useState(0);
     const [deaths, setDeaths] = useState(0);
     const [killFeed, setKillFeed] = useState([]);
@@ -36,6 +37,7 @@ function App() {
         onKill: () => setKills(prev => prev + 1),
         onDeath: () => setDeaths(prev => prev + 1),
         onAmmoChange: (a) => setAmmo(a),
+        onGrenadeChange: (g) => setGrenades(g),
         onHitmarker: (headshot) => { setIsHeadshot(headshot); setShowHitmarker(true); setTimeout(() => setShowHitmarker(false), 200); },
         onStaminaChange: (s) => setStamina(s),
         onKillFeed: (msg) => displayKillFeed(msg),
@@ -356,7 +358,15 @@ function App() {
                                 <div key={i} className={`bullet-pip ${i < ammo ? 'full' : 'empty'}`}></div>
                             ))}
                         </div>
-                        <div className="reload-hint">[R] RELOAD  [G] GRENADE</div>
+                        <div className="grenade-row">
+                            <span className="grenade-label">💣 GRENADES</span>
+                            <div className="grenade-pips">
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} className={`grenade-pip ${i < grenades ? 'full' : 'empty'}`}>●</div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="reload-hint">[R] RELOAD + RESUPPLY  [G] GRENADE</div>
                     </div>
 
                     {/* Kill feed */}

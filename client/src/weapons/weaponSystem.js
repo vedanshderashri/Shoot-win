@@ -4,17 +4,19 @@ import sceneManager from '../engine/scene';
 import { Grenade } from './grenade';
 
 export default class WeaponSystem {
-    constructor(scene, camera, socket, onAmmoChange, onHitmarker) {
+    constructor(scene, camera, socket, onAmmoChange, onHitmarker, onGrenadeChange) {
         this.scene = scene;
         this.camera = camera;
         this.socket = socket;
+        this.onGrenadeChange = onGrenadeChange;
         this.currentWeapon = new Rifle(scene, camera, socket, onAmmoChange, onHitmarker);
 
         this.isMouseDown = false;
         this.isAiming = false;
         this.isDead = false;
 
-        this.grenadesLeft = 3;
+        this.maxGrenades = 3;
+        this.grenadesLeft = this.maxGrenades;
         this.activeGrenades = [];
 
         this.onMouseDown = this.onMouseDown.bind(this);
@@ -24,12 +26,18 @@ export default class WeaponSystem {
         document.addEventListener('mousedown', this.onMouseDown, false);
         document.addEventListener('mouseup', this.onMouseUp, false);
         document.addEventListener('keydown', this.onKeyDown, false);
+
+        // Emit initial grenade count
+        if (this.onGrenadeChange) this.onGrenadeChange(this.grenadesLeft);
     }
 
     onKeyDown(event) {
         if (this.isDead) return;
         if (event.code === 'KeyR') {
             this.currentWeapon.reload();
+            // Reload grenades back to max
+            this.grenadesLeft = this.maxGrenades;
+            if (this.onGrenadeChange) this.onGrenadeChange(this.grenadesLeft);
         } else if (event.code === 'KeyG') {
             this.throwGrenade();
         }
@@ -75,6 +83,7 @@ export default class WeaponSystem {
     throwGrenade() {
         if (this.isDead || this.grenadesLeft <= 0) return;
         this.grenadesLeft--;
+        if (this.onGrenadeChange) this.onGrenadeChange(this.grenadesLeft);
 
         const worldQuat = new THREE.Quaternion();
         this.camera.getWorldQuaternion(worldQuat);

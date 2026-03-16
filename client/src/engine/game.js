@@ -8,6 +8,9 @@ import cameraManager from './camera';
 import rendererManager from './renderer';
 import gameLoop from './gameLoop';
 import { buildWarzoneMap, AmbientWarAudio } from '../maps/warzoneMap';
+import { buildAdvancedMap } from '../maps/desertMap';
+import { buildCQBMap } from '../maps/cqbMap';
+import { buildArcticMap } from '../maps/arcticMap';
 import Soldier from '../player/character';
 
 class GameEngine {
@@ -53,8 +56,34 @@ class GameEngine {
 
         this.clock = new THREE.Clock();
 
-        const { animateWarzone } = buildWarzoneMap(this.scene, this.world, this.physicsMaterial);
-        this.animateWarzone = animateWarzone;
+        // ── Random Map Selection ──
+        const maps = ['warzone', 'desert', 'cqb', 'arctic'];
+        const selectedMap = maps[Math.floor(Math.random() * maps.length)];
+        console.log(`[Map] Loading map: ${selectedMap.toUpperCase()}`);
+
+        this.animateMap = null; // Generic map animate function
+        switch (selectedMap) {
+            case 'warzone': {
+                const { animateWarzone } = buildWarzoneMap(this.scene, this.world, this.physicsMaterial);
+                this.animateMap = animateWarzone;
+                break;
+            }
+            case 'desert': {
+                const { animateDesert } = buildAdvancedMap(this.scene, this.world, this.physicsMaterial);
+                this.animateMap = animateDesert;
+                break;
+            }
+            case 'cqb': {
+                const { animateCQB } = buildCQBMap(this.scene, this.world, this.physicsMaterial);
+                this.animateMap = animateCQB;
+                break;
+            }
+            case 'arctic': {
+                const { animateArctic } = buildArcticMap(this.scene, this.world, this.physicsMaterial);
+                this.animateMap = animateArctic;
+                break;
+            }
+        }
 
         // Start ambient war audio (requires user interaction first — deferred to resume)
         this.ambientAudio = new AmbientWarAudio();
@@ -65,7 +94,7 @@ class GameEngine {
         this.localPlayer = new PlayerModel(this.scene, this.camera, this.world, this.physicsMaterial, this.callbacks.onStaminaChange);
 
         // Setup Weapon System
-        this.weaponSystem = new WeaponSystem(this.scene, this.camera, this.socket, this.callbacks.onAmmoChange, this.callbacks.onHitmarker);
+        this.weaponSystem = new WeaponSystem(this.scene, this.camera, this.socket, this.callbacks.onAmmoChange, this.callbacks.onHitmarker, this.callbacks.onGrenadeChange);
 
         this.setupNetworkEvents();
 
@@ -204,8 +233,8 @@ class GameEngine {
                 p.character.animate(p.isMoving, dt);
             }
         }
-        // Animate warzone effects (fire, smoke, dust)
-        if (this.animateWarzone) this.animateWarzone(dt);
+        // Animate map effects (fire, smoke, dust, snow, etc.)
+        if (this.animateMap) this.animateMap(dt);
     }
 
     joinRoom(code, name) {

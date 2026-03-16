@@ -311,4 +311,109 @@ export function buildAdvancedMap(scene, world, physicsMaterial) {
         addBarrel(x, z);
         addBarrel(x + 1.5, z + 1);
     });
+
+    // ========== ENHANCED LIGHTING ==========
+    // Warm sun glow
+    const sunGlow = new THREE.PointLight(0xffaa44, 1.5, 100);
+    sunGlow.position.set(50, 30, 50);
+    scene.add(sunGlow);
+
+    // ========== SAND PARTICLE SYSTEM ==========
+    const sandGeo = new THREE.BufferGeometry();
+    const sandCount = 500;
+    const sandPos = new Float32Array(sandCount * 3);
+    const sandSpeeds = new Float32Array(sandCount);
+    for (let i = 0; i < sandCount; i++) {
+        sandPos[i * 3] = (Math.random() - 0.5) * 300;
+        sandPos[i * 3 + 1] = Math.random() * 6;
+        sandPos[i * 3 + 2] = (Math.random() - 0.5) * 300;
+        sandSpeeds[i] = 2 + Math.random() * 4;
+    }
+    sandGeo.setAttribute('position', new THREE.BufferAttribute(sandPos, 3));
+    const sandPartMat = new THREE.PointsMaterial({
+        color: 0xc8a868,
+        size: 0.1,
+        transparent: true,
+        opacity: 0.4,
+        depthWrite: false
+    });
+    const sandParticles = new THREE.Points(sandGeo, sandPartMat);
+    scene.add(sandParticles);
+
+    // ========== HEAT SHIMMER ==========
+    const shimmerPlanes = [];
+    for (let i = 0; i < 4; i++) {
+        const sGeo = new THREE.PlaneGeometry(60 + Math.random() * 40, 3 + Math.random() * 2);
+        const sMat = new THREE.MeshBasicMaterial({
+            color: 0xffeedd,
+            transparent: true,
+            opacity: 0.03,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const shimmer = new THREE.Mesh(sGeo, sMat);
+        shimmer.position.set(
+            (Math.random() - 0.5) * 200,
+            0.3 + Math.random() * 0.5,
+            (Math.random() - 0.5) * 200
+        );
+        shimmer.rotation.x = -Math.PI / 2;
+        shimmer.userData.shimmerPhase = Math.random() * Math.PI * 2;
+        scene.add(shimmer);
+        shimmerPlanes.push(shimmer);
+    }
+
+    // ========== DEAD TREES ==========
+    const treeMat = new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 0.95 });
+    const treePositions = [[-80, -80], [80, 80], [-100, 50], [100, -50], [0, -130], [0, 130]];
+    treePositions.forEach(([tx, tz]) => {
+        // Trunk
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.3, 4, 6), treeMat);
+        trunk.position.set(tx, 2, tz);
+        trunk.rotation.z = (Math.random() - 0.5) * 0.2;
+        trunk.castShadow = true;
+        trunk.name = 'env';
+        scene.add(trunk);
+        // Branches
+        for (let b = 0; b < 3; b++) {
+            const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.08, 1.5 + Math.random(), 4), treeMat);
+            branch.position.set(tx + (Math.random() - 0.5) * 0.5, 2.5 + b * 0.8, tz + (Math.random() - 0.5) * 0.5);
+            branch.rotation.z = (Math.random() - 0.5) * 1.2;
+            branch.rotation.x = (Math.random() - 0.5) * 0.5;
+            branch.name = 'env';
+            scene.add(branch);
+        }
+    });
+
+    // ========== ANIMATE ==========
+    let desertT = 0;
+    function animateDesert(dt) {
+        desertT += dt;
+
+        // Wind-blown sand
+        const sp = sandGeo.attributes.position.array;
+        for (let i = 0; i < sandCount; i++) {
+            sp[i * 3] += sandSpeeds[i] * dt; // wind direction
+            sp[i * 3 + 1] += Math.sin(desertT * 2 + i) * 0.02; // slight bobbing
+            if (sp[i * 3] > 150) {
+                sp[i * 3] = -150;
+                sp[i * 3 + 2] = (Math.random() - 0.5) * 300;
+                sp[i * 3 + 1] = Math.random() * 6;
+            }
+        }
+        sandGeo.attributes.position.needsUpdate = true;
+
+        // Heat shimmer wobble
+        shimmerPlanes.forEach(s => {
+            const phase = s.userData.shimmerPhase || 0;
+            s.material.opacity = 0.02 + Math.sin(desertT * 3 + phase) * 0.015;
+            s.scale.x = 1 + Math.sin(desertT * 2 + phase) * 0.1;
+        });
+
+        // Sun glow pulse
+        sunGlow.intensity = 1.2 + Math.sin(desertT * 0.5) * 0.3;
+    }
+
+    return { animateDesert };
 }

@@ -184,4 +184,143 @@ export function buildCQBMap(scene, world, physicsMaterial) {
     }
 
     [[20, 20], [-20, -20], [10, -40], [-10, 40]].forEach(([x, z]) => addBarrel(x, z));
+
+    // ========== FLUORESCENT TUBE LIGHTS ==========
+    const lights = [];
+    const lightPositions = [[0, 0], [20, 20], [-20, -20], [30, -15], [-30, 15], [0, 35], [0, -35]];
+    lightPositions.forEach(([lx, lz]) => {
+        // Tube mesh
+        const tubeGeo = new THREE.CylinderGeometry(0.04, 0.04, 3, 6);
+        const tubeMat = new THREE.MeshBasicMaterial({ color: 0xeeffee, transparent: true, opacity: 0.9 });
+        const tube = new THREE.Mesh(tubeGeo, tubeMat);
+        tube.position.set(lx, 6.5, lz);
+        tube.rotation.z = Math.PI / 2;
+        tube.name = 'env';
+        scene.add(tube);
+
+        // Light source
+        const lt = new THREE.PointLight(0xccffcc, 1.2, 15);
+        lt.position.set(lx, 6.2, lz);
+        scene.add(lt);
+        lights.push({ light: lt, tube, phase: Math.random() * Math.PI * 2, flickerSpeed: 5 + Math.random() * 10 });
+    });
+
+    // ========== REFLECTIVE PUDDLES ==========
+    const puddlePositions = [[5, 5], [-10, -10], [15, -25], [-5, 20], [25, 10]];
+    puddlePositions.forEach(([px, pz]) => {
+        const pGeo = new THREE.CircleGeometry(1.5 + Math.random() * 1.5, 16);
+        const pMat = new THREE.MeshStandardMaterial({
+            color: 0x223344,
+            metalness: 0.9,
+            roughness: 0.1,
+            transparent: true,
+            opacity: 0.6
+        });
+        const puddle = new THREE.Mesh(pGeo, pMat);
+        puddle.rotation.x = -Math.PI / 2;
+        puddle.position.set(px, 0.005, pz);
+        puddle.name = 'env';
+        scene.add(puddle);
+    });
+
+    // ========== SHELL CASINGS ==========
+    const casingMat = new THREE.MeshStandardMaterial({ color: 0xb8923a, metalness: 0.8, roughness: 0.3 });
+    for (let i = 0; i < 30; i++) {
+        const cGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.08, 6);
+        const casing = new THREE.Mesh(cGeo, casingMat);
+        casing.position.set(
+            (Math.random() - 0.5) * 60,
+            0.04,
+            (Math.random() - 0.5) * 60
+        );
+        casing.rotation.x = Math.PI / 2;
+        casing.rotation.z = Math.random() * Math.PI;
+        casing.name = 'env';
+        scene.add(casing);
+    }
+
+    // ========== HANGING CHAINS ==========
+    const chainMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.7, roughness: 0.5 });
+    const chainPositions = [[10, 10], [-10, -10], [25, -25], [-25, 25]];
+    chainPositions.forEach(([cx, cz]) => {
+        for (let j = 0; j < 8; j++) {
+            const link = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.02, 6, 8), chainMat);
+            link.position.set(cx + (Math.random() - 0.5) * 0.1, 7.5 - j * 0.15, cz);
+            link.rotation.x = j % 2 === 0 ? 0 : Math.PI / 2;
+            link.name = 'env';
+            scene.add(link);
+        }
+    });
+
+    // ========== GRAFFITI DECALS ==========
+    const graffitiPositions = [
+        { pos: [-35, 2, 5], rot: [0, Math.PI / 2, 0] },
+        { pos: [0, 2, -50], rot: [0, 0, 0] },
+        { pos: [50, 2, 10], rot: [0, -Math.PI / 2, 0] }
+    ];
+    graffitiPositions.forEach(({ pos, rot }) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.fillRect(0, 0, 256, 128);
+        // Random war graffiti
+        const texts = ['NO EXIT', 'KILL ZONE', 'STAY FROSTY', 'DANGER', 'WATCH 6'];
+        ctx.font = 'bold 40px Arial';
+        ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 50%)`;
+        ctx.fillText(texts[Math.floor(Math.random() * texts.length)], 10, 70);
+        const tex = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+        const decal = new THREE.Mesh(new THREE.PlaneGeometry(4, 2), mat);
+        decal.position.set(...pos);
+        decal.rotation.set(...rot);
+        decal.name = 'env';
+        scene.add(decal);
+    });
+
+    // ========== DUST MOTES ==========
+    const dustGeo = new THREE.BufferGeometry();
+    const dustCount = 200;
+    const dustPositions = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount; i++) {
+        dustPositions[i * 3] = (Math.random() - 0.5) * 80;
+        dustPositions[i * 3 + 1] = Math.random() * 7;
+        dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 80;
+    }
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    const dustMat = new THREE.PointsMaterial({
+        color: 0x998866,
+        size: 0.06,
+        transparent: true,
+        opacity: 0.3,
+        depthWrite: false
+    });
+    const dustParticles = new THREE.Points(dustGeo, dustMat);
+    scene.add(dustParticles);
+
+    // ========== ANIMATE ==========
+    let cqbT = 0;
+    function animateCQB(dt) {
+        cqbT += dt;
+
+        // Fluorescent light flicker
+        lights.forEach(l => {
+            const flicker = Math.sin(cqbT * l.flickerSpeed + l.phase);
+            // Occasional full flicker off
+            const flickerOff = Math.sin(cqbT * 20 + l.phase * 3) > 0.95 ? 0 : 1;
+            l.light.intensity = (1.0 + flicker * 0.3) * flickerOff;
+            l.tube.material.opacity = (0.8 + flicker * 0.2) * flickerOff;
+        });
+
+        // Dust float
+        const dp = dustGeo.attributes.position.array;
+        for (let i = 0; i < dustCount; i++) {
+            dp[i * 3 + 1] += Math.sin(cqbT * 0.5 + i) * 0.003;
+            dp[i * 3] += Math.cos(cqbT * 0.3 + i * 0.5) * 0.002;
+            if (dp[i * 3 + 1] > 7) dp[i * 3 + 1] = 0;
+        }
+        dustGeo.attributes.position.needsUpdate = true;
+    }
+
+    return { animateCQB };
 }

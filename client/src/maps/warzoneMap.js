@@ -497,7 +497,82 @@ export function buildWarzoneMap(scene, world, physicsMaterial) {
     const dust = new THREE.Points(dustGeo, dustMat);
     scene.add(dust);
 
-    // ── ANIMATE: fires + dust ─────────────────────
+    // ── EMBER PARTICLES ──────────────────────────────
+    const emberGeo = new THREE.BufferGeometry();
+    const emberCount = 150;
+    const emberPos = new Float32Array(emberCount * 3);
+    const emberSpeeds = new Float32Array(emberCount);
+    for (let i = 0; i < emberCount; i++) {
+        emberPos[i * 3] = (Math.random() - 0.5) * 80;
+        emberPos[i * 3 + 1] = Math.random() * 15;
+        emberPos[i * 3 + 2] = (Math.random() - 0.5) * 80;
+        emberSpeeds[i] = 0.5 + Math.random() * 1.5;
+    }
+    emberGeo.setAttribute('position', new THREE.BufferAttribute(emberPos, 3));
+    const emberMat = new THREE.PointsMaterial({
+        color: 0xff6600,
+        size: 0.08,
+        transparent: true,
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    const embers = new THREE.Points(emberGeo, emberMat);
+    scene.add(embers);
+
+    // ── BARBED WIRE COILS ────────────────────────────
+    const barbedMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.8, roughness: 0.4 });
+    const barbedPositions = [
+        [-18, 2.5, -2], [25, 2.5, -8], [-10, 1.5, 15], [15, 1.8, -15],
+        [0, 1.5, -20], [-5, 2, 25], [30, 1.5, 20]
+    ];
+    barbedPositions.forEach(([bx, by, bz]) => {
+        const coil = new THREE.Mesh(
+            new THREE.TorusGeometry(0.4 + Math.random() * 0.3, 0.03, 8, 20),
+            barbedMat
+        );
+        coil.position.set(bx, by, bz);
+        coil.rotation.x = Math.random() * Math.PI;
+        coil.rotation.z = Math.random() * Math.PI;
+        coil.castShadow = true;
+        coil.name = 'env';
+        scene.add(coil);
+    });
+
+    // ── BROKEN STREET LAMPS ──────────────────────────
+    const lampPosts = [];
+    const lampPostPositions = [[-15, -25], [20, 15], [-25, 25], [15, -10]];
+    lampPostPositions.forEach(([lpx, lpz]) => {
+        // Post
+        const post = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08, 0.12, 5, 8),
+            metalMat
+        );
+        post.position.set(lpx, 2.5, lpz);
+        post.castShadow = true;
+        post.name = 'env';
+        scene.add(post);
+
+        // Arm
+        const arm = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.04, 0.04, 1.5, 6),
+            metalMat
+        );
+        arm.position.set(lpx + 0.5, 4.8, lpz);
+        arm.rotation.z = Math.PI / 2;
+        arm.name = 'env';
+        scene.add(arm);
+
+        // Flickering light (some broken, some working)
+        if (Math.random() > 0.3) {
+            const lamp = new THREE.PointLight(0xff9966, 1.5, 12);
+            lamp.position.set(lpx + 1, 4.5, lpz);
+            scene.add(lamp);
+            lampPosts.push({ light: lamp, phase: Math.random() * Math.PI * 2 });
+        }
+    });
+
+    // ── ANIMATE: fires + dust + embers ───────────────
     let fireT = 0;
     function animateWarzone(dt) {
         fireT += dt;
@@ -526,9 +601,28 @@ export function buildWarzoneMap(scene, world, physicsMaterial) {
         }
         dustGeo.attributes.position.needsUpdate = true;
 
+        // Float embers upward with wind sway
+        const ep = emberGeo.attributes.position.array;
+        for (let i = 0; i < emberCount; i++) {
+            ep[i * 3 + 1] += emberSpeeds[i] * dt;
+            ep[i * 3] += Math.sin(fireT * 2 + i) * 0.03;
+            if (ep[i * 3 + 1] > 18) {
+                ep[i * 3 + 1] = 0;
+                ep[i * 3] = (Math.random() - 0.5) * 80;
+                ep[i * 3 + 2] = (Math.random() - 0.5) * 80;
+            }
+        }
+        emberGeo.attributes.position.needsUpdate = true;
+
         // Pulse fire glows
         fireGlow1.intensity = 2 + Math.sin(fireT * 7) * 1;
         fireGlow2.intensity = 2 + Math.cos(fireT * 5) * 1;
+
+        // Flicker broken street lamps
+        lampPosts.forEach(lp => {
+            const flicker = Math.sin(fireT * 15 + lp.phase);
+            lp.light.intensity = flicker > 0.7 ? 0 : (1.0 + flicker * 0.5);
+        });
     }
 
     return { animateWarzone };
