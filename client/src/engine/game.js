@@ -11,14 +11,36 @@ import { buildWarzoneMap, AmbientWarAudio } from '../maps/warzoneMap';
 import Soldier from '../player/character';
 
 class GameEngine {
+    constructor() {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const serverUrl = isLocal
+            ? 'http://127.0.0.1:3000' // Use IP instead of 'localhost' to avoid DNS resolution delays
+            : 'https://warzone-battlefield.onrender.com';
+
+        console.log(`[Network] Establishing high-speed link to: ${serverUrl}`);
+        this.socket = io(serverUrl, {
+            transports: ['polling', 'websocket'], // Polling first is more robust for initial handshake
+            reconnectionAttempts: 10,
+            timeout: 5000,
+            forceNew: true,
+            autoConnect: true
+        });
+
+        this.socket.on('connect', () => {
+            console.log(`[Network] Link established. SID: ${this.socket.id}`);
+            this.isInitialized = true;
+        });
+        this.socket.on('connect_error', (err) => console.error(`[Network] Connection failed:`, err));
+
+        this.players = {};
+        this.isInitialized = false;
+    }
+
     init(container, roomCode, callbacks) {
         this.container = container;
         this.roomCode = roomCode;
         this.callbacks = callbacks;
-        this.players = {};
-
-        // Server Connection
-        this.socket = io(`https://warzone-battlefield.onrender.com`);
+        this.isInitialized = true;
 
         // Use Modular Engines
         this.scene = sceneManager.scene;
@@ -60,6 +82,21 @@ class GameEngine {
     }
 
     setupNetworkEvents() {
+        if (!this.socket) return;
+
+        // Remove any existing listeners to prevent duplicates if init is called multiple times
+        this.socket.off('room_joined');
+        this.socket.off('room_created');
+        this.socket.off('player_joined');
+        this.socket.off('player_moved');
+        this.socket.off('player_left');
+        this.socket.off('player_health_changed');
+        this.socket.off('player_died');
+        this.socket.off('scores_update');
+        this.socket.off('sync_state');
+        this.socket.off('player_throw_grenade');
+        this.socket.off('game_over');
+
         // Listen for room join confirmation
         this.socket.on('room_joined', (data) => {
             console.log(`Joined room ${data.code}`);
@@ -176,9 +213,19 @@ class GameEngine {
     }
 
     createRoom(name) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            if (!this.socket.connected) {
+                reject(new Error('Socket not connected'));
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                reject(new Error('Connection timed out. Please try again.'));
+            }, 10000);
+
             this.socket.emit('create_room', { name });
             this.socket.once('room_created', (data) => {
+                clearTimeout(timeout);
                 resolve(data.code);
             });
         });

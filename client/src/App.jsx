@@ -6,9 +6,9 @@ function App() {
     const [screen, setScreen] = useState('lobby');
     const [playerName, setPlayerName] = useState('');
     const [roomCode, setRoomCode] = useState('');
-    const [joinCode, setJoinCode] = useState('');
     const [joinError, setJoinError] = useState('');
     const [winnerData, setWinnerData] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
 
     const [health, setHealth] = useState(100);
     const [stamina, setStamina] = useState(100);
@@ -22,6 +22,7 @@ function App() {
     const [tookDamage, setTookDamage] = useState(false);
     const [showScoreboard, setShowScoreboard] = useState(false);
     const [isScoping, setIsScoping] = useState(false);
+    const [isWakingUp, setIsWakingUp] = useState(false);
 
     const canvasContainerRef = useRef(null);
 
@@ -46,24 +47,44 @@ function App() {
 
     const handleCreateRoom = async () => {
         const name = playerName.trim() || 'Ghost';
-        gameEngine.init(canvasContainerRef.current, '', gameCallbacks);
-        const code = await gameEngine.createRoom(name);
-        startGame(code);
+        try {
+            gameEngine.init(canvasContainerRef.current, '', gameCallbacks);
+            const code = await gameEngine.createRoom(name);
+            startGame(code);
+        } catch (err) {
+            setJoinError(err.message.toUpperCase());
+            setScreen('lobby');
+        }
     };
 
     const handleJoinRoom = () => {
         const name = playerName.trim() || 'Ghost';
         const code = joinCode.trim().toUpperCase();
         if (!code || code.length < 4) { setJoinError('INVALID ROOM CODE'); return; }
-        gameEngine.init(canvasContainerRef.current, code, gameCallbacks);
-        const socket = gameEngine.getSocket();
-        socket.on('join_error', (data) => { setJoinError(data.message); setScreen('join'); });
-        socket.on('room_joined', () => startGame(code));
-        gameEngine.joinRoom(code, name);
+
+        try {
+            gameEngine.init(canvasContainerRef.current, code, gameCallbacks);
+            const socket = gameEngine.getSocket();
+            socket.on('join_error', (data) => {
+                setJoinError(data.message.toUpperCase());
+                setScreen('join');
+            });
+            socket.on('room_joined', () => startGame(code));
+            gameEngine.joinRoom(code, name);
+        } catch (err) {
+            setJoinError('JOIN FAILED');
+        }
     };
 
     // Scoreboard + scope state
     useEffect(() => {
+        const socket = gameEngine.getSocket();
+
+        const updateConnection = () => setIsConnected(socket.connected);
+        socket.on('connect', updateConnection);
+        socket.on('disconnect', updateConnection);
+        updateConnection();
+
         const onKeyDown = (e) => { if (e.code === 'Tab') { e.preventDefault(); setShowScoreboard(true); } };
         const onKeyUp = (e) => { if (e.code === 'Tab') setShowScoreboard(false); };
         const onMouseDown = (e) => { if (e.button === 2) setIsScoping(true); };
@@ -80,7 +101,26 @@ function App() {
         };
     }, []);
 
-    useEffect(() => { return () => gameEngine.cleanup(); }, []);
+    useEffect(() => {
+        // Aggressive Wakeup Ping for Render Free Tier
+        const serverUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000'
+            : 'https://warzone-battlefield.onrender.com';
+
+        const wakeup = async () => {
+            setIsWakingUp(true);
+            try {
+                // Fetch is faster than Socket.IO for waking up a sleeping instance
+                await fetch(serverUrl, { mode: 'no-cors' });
+                console.log("[Lobby] Wakeup ping dispatched.");
+            } catch (e) {
+                console.warn("[Lobby] Wakeup ping failed, relying on Socket.IO.", e);
+            }
+        };
+        wakeup();
+
+        return () => gameEngine.cleanup();
+    }, []);
 
     const kd = deaths > 0 ? (kills / deaths).toFixed(2) : kills.toFixed(2);
     const healthPct = Math.max(0, Math.min(100, health));
@@ -112,6 +152,25 @@ function App() {
                                     ⚠ HOSTILE FORCES DETECTED · SECTOR 4 COMPROMISED · ALL UNITS DEPLOY IMMEDIATELY
                                 </div>
 
+                                {/* Connection Status */}
+                                <div className="connection-status">
+                                    {isConnected ?
+                                        <span className="status-online">● SATELLITE LINK ESTABLISHED</span> :
+                                        <div className="status-offline-container">
+                                            <span className="status-offline">
+                                                ○ {window.location.hostname === 'localhost' ? 'SYNCING LOCAL...' : 'CONNECTING TO COMMAND...'}
+                                            </span>
+                                            <div className="connection-loader">
+                                                <div className="loader-fill"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                {joinError && screen === 'lobby' && (
+                                    <div className="mil-error" style={{ margin: '10px 0' }}>⚠ {joinError}</div>
+                                )}
+
                                 {/* Call sign input */}
                                 <div className="mil-input-group">
                                     <label className="mil-label">▶ CALL SIGN / IDENTIFIER</label>
@@ -127,11 +186,19 @@ function App() {
                                 </div>
 
                                 <div className="mil-buttons">
-                                    <button className="mil-btn mil-btn-primary" onClick={() => setScreen('create')}>
+                                    <button
+                                        className={`mil-btn mil-btn-primary ${!isConnected ? 'disabled' : ''}`}
+                                        onClick={() => isConnected && setScreen('create')}
+                                        disabled={!isConnected}
+                                    >
                                         <span className="btn-icon">⬡</span>
                                         <span>CREATE OPERATION</span>
                                     </button>
-                                    <button className="mil-btn mil-btn-secondary" onClick={() => setScreen('join')}>
+                                    <button
+                                        className={`mil-btn mil-btn-secondary ${!isConnected ? 'disabled' : ''}`}
+                                        onClick={() => isConnected && setScreen('join')}
+                                        disabled={!isConnected}
+                                    >
                                         <span className="btn-icon">◈</span>
                                         <span>JOIN SQUAD</span>
                                     </button>

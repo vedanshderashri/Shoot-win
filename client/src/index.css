@@ -241,6 +241,74 @@ html {
   }
 }
 
+/* ── Connection Status ── */
+.connection-status {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-align: center;
+  margin: -15px 0 10px;
+  height: 20px;
+}
+
+.status-online {
+  color: #4caf50;
+  text-transform: uppercase;
+}
+
+.status-offline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.status-offline {
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+
+.connection-loader {
+  width: 120px;
+  height: 2px;
+  background: rgba(255, 152, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.loader-fill {
+  width: 40%;
+  height: 100%;
+  background: var(--mil-amber);
+  position: absolute;
+  animation: loader-slide 2s infinite ease-in-out;
+  box-shadow: 0 0 8px var(--mil-amber);
+}
+
+@keyframes loader-slide {
+  from {
+    left: -40%;
+  }
+
+  to {
+    left: 140%;
+  }
+}
+
+@keyframes pulse-opacity {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ── Inputs ── */
 .mil-input-group {
   width: 100%;
@@ -357,6 +425,16 @@ html {
 .mil-btn-ghost:hover {
   color: var(--text-main);
   border-color: var(--mil-border);
+}
+
+.mil-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.mil-btn.disabled:hover::before {
+  transform: scaleX(0);
 }
 
 .mil-btn.full-w {
@@ -1057,8 +1135,15 @@ html {
 }
 
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: inset 0 0 20px rgba(255, 152, 0, 0.1); }
-  50% { box-shadow: inset 0 0 40px rgba(255, 152, 0, 0.2); }
+
+  0%,
+  100% {
+    box-shadow: inset 0 0 20px rgba(255, 152, 0, 0.1);
+  }
+
+  50% {
+    box-shadow: inset 0 0 40px rgba(255, 152, 0, 0.2);
+  }
 }
 
 .winner-label {

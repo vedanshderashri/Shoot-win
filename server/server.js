@@ -26,6 +26,6 @@ initNetworking(io);
 gameServer.startLoop();
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server listening on port ${PORT} (Dual-stack 0.0.0.0)`);
 });

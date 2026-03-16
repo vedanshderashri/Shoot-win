@@ -109,7 +109,18 @@ function initNetworking(io) {
                     });
 
                     // Send updated scores to room
-                    io.to(socket.roomCode).emit('scores_update', playerManager.getScoresInRoom(socket.roomCode));
+                    const updatedScores = playerManager.getScoresInRoom(socket.roomCode);
+                    io.to(socket.roomCode).emit('scores_update', updatedScores);
+
+                    // Check for win condition (20 kills)
+                    const killer = playerManager.getPlayer(socket.id);
+                    if (killer && killer.kills >= 20) {
+                        io.to(socket.roomCode).emit('game_over', {
+                            winnerId: socket.id,
+                            winnerName: killer.name,
+                            scores: updatedScores
+                        });
+                    }
                 }
             }
         });

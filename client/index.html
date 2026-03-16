@@ -2,8 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device.width, initial-scale=1.0" />
-    <title>Browser FPS Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WARZONE // FPS</title>
+    
+    <!-- Preconnect to server for instant link -->
+    <link rel="preconnect" href="https://warzone-battlefield.onrender.com" crossorigin>
+    <link rel="dns-prefetch" href="https://warzone-battlefield.onrender.com">
+
+    <script>
+        // High-speed wakeup script (Runs before React/ThreeJS load)
+        const target = window.location.hostname.includes('localhost') ? 'http://127.0.0.1:3000' : 'https://warzone-battlefield.onrender.com';
+        fetch(target, { mode: 'no-cors', priority: 'high' }).catch(() => {});
+        console.log('%c[INIT] SATELLITE UPLINK INITIALIZED', 'color: #ff9800; font-weight: bold;');
+    </script>
   </head>
   <body>
     <div id="root"></div>
