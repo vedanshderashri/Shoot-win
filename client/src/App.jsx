@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import gameEngine from './engine/game';
 import Scoreboard from './ui/scoreboard.jsx';
+import { isMobile } from './player/touchControls';
 
 function App() {
     const [screen, setScreen] = useState('lobby');
     const [playerName, setPlayerName] = useState('');
     const [roomCode, setRoomCode] = useState('');
+    const [joinCode, setJoinCode] = useState('');
     const [joinError, setJoinError] = useState('');
     const [winnerData, setWinnerData] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
@@ -206,22 +208,24 @@ function App() {
                                     </button>
                                 </div>
 
-                                {/* Controls reference */}
-                                <div className="controls-ref">
-                                    <div className="controls-title">◆ FIELD MANUAL</div>
-                                    <div className="controls-grid">
-                                        {[
-                                            ['W A S D', 'MOVE'], ['MOUSE', 'AIM'], ['L-CLICK', 'FIRE'],
-                                            ['R-CLICK', 'SCOPE'], ['R', 'RELOAD'], ['SHIFT', 'SPRINT'],
-                                            ['CTRL', 'CROUCH'], ['SPACE', 'JUMP'], ['TAB', 'INTEL'],
-                                        ].map(([key, action]) => (
-                                            <div key={key} className="ctrl-row">
-                                                <span className="ctrl-key">{key}</span>
-                                                <span className="ctrl-action">{action}</span>
-                                            </div>
-                                        ))}
+                                {/* Controls reference (desktop only) */}
+                                {!isMobile && (
+                                    <div className="controls-ref">
+                                        <div className="controls-title">◆ FIELD MANUAL</div>
+                                        <div className="controls-grid">
+                                            {[
+                                                ['W A S D', 'MOVE'], ['MOUSE', 'AIM'], ['L-CLICK', 'FIRE'],
+                                                ['R-CLICK', 'SCOPE'], ['R', 'RELOAD'], ['SHIFT', 'SPRINT'],
+                                                ['CTRL', 'CROUCH'], ['SPACE', 'JUMP'], ['TAB', 'INTEL'],
+                                            ].map(([key, action]) => (
+                                                <div key={key} className="ctrl-row">
+                                                    <span className="ctrl-key">{key}</span>
+                                                    <span className="ctrl-action">{action}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </>
                         )}
 
@@ -353,11 +357,13 @@ function App() {
                             <div className="ammo-sep">/</div>
                             <div className="ammo-reserve">30</div>
                         </div>
-                        <div className="ammo-bullets">
-                            {Array.from({ length: 30 }).map((_, i) => (
-                                <div key={i} className={`bullet-pip ${i < ammo ? 'full' : 'empty'}`}></div>
-                            ))}
-                        </div>
+                        {!isMobile && (
+                            <div className="ammo-bullets">
+                                {Array.from({ length: 30 }).map((_, i) => (
+                                    <div key={i} className={`bullet-pip ${i < ammo ? 'full' : 'empty'}`}></div>
+                                ))}
+                            </div>
+                        )}
                         <div className="grenade-row">
                             <span className="grenade-label">💣 GRENADES</span>
                             <div className="grenade-pips">
@@ -366,7 +372,7 @@ function App() {
                                 ))}
                             </div>
                         </div>
-                        <div className="reload-hint">[R] RELOAD + RESUPPLY  [G] GRENADE</div>
+                        {!isMobile && <div className="reload-hint">[R] RELOAD + RESUPPLY  [G] GRENADE</div>}
                     </div>
 
                     {/* Kill feed */}
@@ -378,6 +384,94 @@ function App() {
 
                     {/* Scoreboard overlay */}
                     <Scoreboard visible={showScoreboard} players={scores.length > 0 ? scores : [{ name: playerName || 'You', kills, deaths }]} />
+
+                    {/* ── Mobile Touch Buttons ── */}
+                    {isMobile && (
+                        <div className="mobile-controls">
+                            <button
+                                className="mobile-action-btn fire-btn"
+                                onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    if (window.gameEngine?.weaponSystem) {
+                                        window.gameEngine.weaponSystem.isMouseDown = true;
+                                        window.gameEngine.weaponSystem.shoot();
+                                    }
+                                }}
+                                onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    if (window.gameEngine?.weaponSystem) {
+                                        window.gameEngine.weaponSystem.isMouseDown = false;
+                                    }
+                                }}
+                            >
+                                🔫
+                            </button>
+                            <button
+                                className="mobile-action-btn aim-btn"
+                                onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    setIsScoping(true);
+                                    if (window.gameEngine?.weaponSystem?.currentWeapon?.setAiming) {
+                                        window.gameEngine.weaponSystem.isAiming = true;
+                                        window.gameEngine.weaponSystem.currentWeapon.setAiming(true);
+                                    }
+                                }}
+                                onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    setIsScoping(false);
+                                    if (window.gameEngine?.weaponSystem?.currentWeapon?.setAiming) {
+                                        window.gameEngine.weaponSystem.isAiming = false;
+                                        window.gameEngine.weaponSystem.currentWeapon.setAiming(false);
+                                    }
+                                }}
+                            >
+                                🎯
+                            </button>
+                            <button
+                                className="mobile-action-btn reload-btn"
+                                onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    if (window.gameEngine?.weaponSystem) {
+                                        window.gameEngine.weaponSystem.reload();
+                                        window.gameEngine.weaponSystem.grenadesLeft = window.gameEngine.weaponSystem.maxGrenades;
+                                        if (window.gameEngine.weaponSystem.onGrenadeChange) {
+                                            window.gameEngine.weaponSystem.onGrenadeChange(window.gameEngine.weaponSystem.grenadesLeft);
+                                        }
+                                    }
+                                }}
+                            >
+                                ↻
+                            </button>
+                            <button
+                                className="mobile-action-btn jump-btn"
+                                onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    if (window.gameEngine?.localPlayer?.controls) {
+                                        window.gameEngine.localPlayer.controls.keys.space = true;
+                                    }
+                                }}
+                                onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    if (window.gameEngine?.localPlayer?.controls) {
+                                        window.gameEngine.localPlayer.controls.keys.space = false;
+                                    }
+                                }}
+                            >
+                                ⬆
+                            </button>
+                            <button
+                                className="mobile-action-btn grenade-btn"
+                                onTouchStart={(e) => {
+                                    e.preventDefault();
+                                    if (window.gameEngine?.weaponSystem) {
+                                        window.gameEngine.weaponSystem.throwGrenade();
+                                    }
+                                }}
+                            >
+                                💣
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
             {/* ───────── GAME OVER SCREEN ───────── */}

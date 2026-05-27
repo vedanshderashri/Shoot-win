@@ -1238,3 +1238,399 @@ html {
   font-weight: 700;
   color: var(--text-bright);
 }
+
+/* ════════ DEVELOPER CREDIT ════════ */
+.developer-credit {
+  position: fixed;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  opacity: 0.5;
+  z-index: 25;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* ════════ TOUCH JOYSTICK OVERLAY ════════ */
+.touch-joystick-base {
+  position: fixed;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(180, 210, 80, 0.08);
+  border: 2px solid rgba(180, 210, 80, 0.25);
+  z-index: 200;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.touch-joystick-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200, 168, 75, 0.5), rgba(200, 168, 75, 0.2));
+  border: 2px solid rgba(200, 168, 75, 0.6);
+  box-shadow: 0 0 12px rgba(200, 168, 75, 0.3);
+  pointer-events: none;
+  transition: transform 0.05s ease-out;
+}
+
+/* ════════ MOBILE ACTION BUTTONS ════════ */
+.mobile-controls {
+  position: fixed;
+  z-index: 150;
+  pointer-events: auto;
+  inset: 0;
+}
+
+.mobile-action-btn {
+  position: absolute;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform 0.1s, box-shadow 0.1s;
+  pointer-events: auto;
+}
+
+.mobile-action-btn:active {
+  transform: scale(0.9);
+}
+
+/* Fire button — large, bottom-right */
+.fire-btn {
+  right: 20px;
+  bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(200, 50, 30, 0.45), rgba(200, 50, 30, 0.2));
+  border: 2px solid rgba(255, 80, 60, 0.5);
+  box-shadow: 0 0 20px rgba(200, 50, 30, 0.3);
+  font-size: 32px;
+}
+
+.fire-btn:active {
+  background: radial-gradient(circle, rgba(255, 80, 60, 0.65), rgba(255, 80, 60, 0.35));
+  box-shadow: 0 0 30px rgba(255, 80, 60, 0.5);
+}
+
+/* Aim button — medium, left of fire */
+.aim-btn {
+  right: 120px;
+  bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+  width: 56px;
+  height: 56px;
+  background: radial-gradient(circle, rgba(50, 120, 200, 0.4), rgba(50, 120, 200, 0.15));
+  border: 2px solid rgba(80, 150, 255, 0.4);
+  box-shadow: 0 0 12px rgba(50, 120, 200, 0.25);
+}
+
+/* Reload button — smaller, above fire */
+.reload-btn {
+  right: 115px;
+  bottom: calc(55px + env(safe-area-inset-bottom, 0px));
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle, rgba(200, 168, 75, 0.35), rgba(200, 168, 75, 0.12));
+  border: 2px solid rgba(200, 168, 75, 0.35);
+  font-size: 22px;
+}
+
+/* Jump button — left side, near joystick */
+.jump-btn {
+  left: calc(35% + 10px);
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  width: 56px;
+  height: 56px;
+  background: radial-gradient(circle, rgba(120, 200, 80, 0.35), rgba(120, 200, 80, 0.12));
+  border: 2px solid rgba(140, 220, 100, 0.35);
+  font-size: 20px;
+}
+
+/* Grenade button */
+.grenade-btn {
+  right: 25px;
+  bottom: calc(200px + env(safe-area-inset-bottom, 0px));
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle, rgba(255, 140, 0, 0.35), rgba(255, 140, 0, 0.12));
+  border: 2px solid rgba(255, 160, 40, 0.35);
+  font-size: 20px;
+}
+
+/* ════════ RESPONSIVE: TABLETS & MOBILE ════════ */
+@media (max-width: 768px) {
+  /* Lobby */
+  .lobby-center {
+    max-width: 100%;
+    padding: 24px 16px 40px;
+    gap: 16px;
+  }
+
+  .logo-title {
+    font-size: clamp(36px, 12vw, 56px);
+    letter-spacing: 6px;
+  }
+
+  .logo-tag, .logo-subtitle {
+    font-size: 8px;
+    letter-spacing: 3px;
+  }
+
+  .alert-strip {
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 6px 8px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .mil-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mil-btn {
+    padding: 12px 16px;
+    font-size: 13px;
+    letter-spacing: 2px;
+  }
+
+  .mil-input {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .mil-card {
+    padding: 20px 16px;
+  }
+
+  /* HUD */
+  .hud-tl {
+    top: 8px;
+    left: 8px;
+  }
+
+  .op-badge {
+    padding: 4px 8px;
+  }
+
+  .op-code {
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  .hud-tc {
+    top: 8px;
+  }
+
+  .stat-pill {
+    padding: 4px 10px;
+  }
+
+  .sp-val {
+    font-size: 16px;
+  }
+
+  .sp-label {
+    font-size: 7px;
+  }
+
+  .hud-bl {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    left: 10px;
+    min-width: 160px;
+  }
+
+  .vital-label {
+    width: 55px;
+  }
+
+  .vital-name {
+    font-size: 7px;
+  }
+
+  .vital-num {
+    font-size: 11px;
+    width: 24px;
+  }
+
+  .vital-bar-track {
+    height: 6px;
+  }
+
+  .hud-br {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    right: 10px;
+  }
+
+  .ammo-mag {
+    font-size: 32px;
+  }
+
+  .ammo-sep {
+    font-size: 18px;
+  }
+
+  .ammo-reserve {
+    font-size: 14px;
+  }
+
+  .weapon-name {
+    font-size: 7px;
+  }
+
+  .kill-feed {
+    top: 46px;
+    right: 8px;
+    max-width: 200px;
+  }
+
+  .kill-feed-item {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+
+  .grenade-label {
+    font-size: 8px;
+  }
+
+  .grenade-pip {
+    font-size: 11px;
+  }
+
+  /* Game Over */
+  .winner-name {
+    font-size: 32px;
+  }
+
+  .final-stats-grid {
+    gap: 12px;
+  }
+
+  .fs-val {
+    font-size: 24px;
+  }
+
+  .scoreboard {
+    min-width: 300px;
+    padding: 20px 24px;
+  }
+}
+
+/* ════════ RESPONSIVE: SMALL PHONES ════════ */
+@media (max-width: 480px) {
+  .logo-title {
+    font-size: clamp(28px, 14vw, 44px);
+    letter-spacing: 4px;
+  }
+
+  .mil-input.code-input {
+    font-size: 20px;
+    letter-spacing: 6px;
+  }
+
+  .connection-status {
+    font-size: 7px;
+    letter-spacing: 2px;
+  }
+
+  .stat-pill {
+    padding: 3px 8px;
+  }
+
+  .sp-val {
+    font-size: 14px;
+  }
+
+  .ammo-mag {
+    font-size: 26px;
+  }
+
+  .hud-bl {
+    min-width: 120px;
+  }
+
+  .vital-label {
+    width: 40px;
+  }
+
+  .vital-icon {
+    font-size: 10px;
+  }
+
+  .vital-name {
+    display: none;
+  }
+
+  .developer-credit {
+    font-size: 7px;
+  }
+}
+
+/* ════════ LANDSCAPE PHONE ADJUSTMENTS ════════ */
+@media (max-height: 500px) and (orientation: landscape) {
+  .lobby-center {
+    padding: 12px 16px 24px;
+    gap: 10px;
+  }
+
+  .logo-title {
+    font-size: 32px;
+  }
+
+  .mil-buttons {
+    flex-direction: row;
+  }
+
+  .hud-bl {
+    bottom: 6px;
+  }
+
+  .hud-br {
+    bottom: 6px;
+  }
+
+  .fire-btn {
+    bottom: 30px;
+    width: 68px;
+    height: 68px;
+  }
+
+  .aim-btn {
+    bottom: 70px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .reload-btn {
+    bottom: 20px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .jump-btn {
+    bottom: 40px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .grenade-btn {
+    bottom: 120px;
+    width: 42px;
+    height: 42px;
+  }
+}

@@ -1,3 +1,5 @@
+import TouchControls, { isMobile } from './touchControls';
+
 export default class Controls {
     constructor(yawObject, pitchObject, body) {
         this.yawObject = yawObject;
@@ -8,6 +10,12 @@ export default class Controls {
         this.canJump = false;
 
         this.setupEventListeners();
+
+        // Initialize touch controls on mobile
+        this.touchControls = null;
+        if (isMobile) {
+            this.touchControls = new TouchControls(yawObject, pitchObject, this.keys);
+        }
     }
 
     setupEventListeners() {

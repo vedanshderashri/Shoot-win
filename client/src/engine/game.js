@@ -12,6 +12,7 @@ import { buildAdvancedMap } from '../maps/desertMap';
 import { buildCQBMap } from '../maps/cqbMap';
 import { buildArcticMap } from '../maps/arcticMap';
 import Soldier from '../player/character';
+import { isMobile } from '../player/touchControls';
 
 class GameEngine {
     constructor() {
@@ -87,8 +88,13 @@ class GameEngine {
 
         // Start ambient war audio (requires user interaction first — deferred to resume)
         this.ambientAudio = new AmbientWarAudio();
-        const startAudio = () => { this.ambientAudio.start(); document.removeEventListener('click', startAudio); };
+        const startAudio = () => {
+            this.ambientAudio.start();
+            document.removeEventListener('click', startAudio);
+            document.removeEventListener('touchstart', startAudio);
+        };
         document.addEventListener('click', startAudio);
+        document.addEventListener('touchstart', startAudio);
 
         // Setup Local Player
         this.localPlayer = new PlayerModel(this.scene, this.camera, this.world, this.physicsMaterial, this.callbacks.onStaminaChange);
@@ -98,12 +104,14 @@ class GameEngine {
 
         this.setupNetworkEvents();
 
-        // Pointer Lock on click
-        this.container.addEventListener('click', () => {
-            if (document.pointerLockElement !== this.container) {
-                this.container.requestPointerLock();
-            }
-        });
+        // Pointer Lock on click (desktop only — mobile uses touch controls)
+        if (!isMobile) {
+            this.container.addEventListener('click', () => {
+                if (document.pointerLockElement !== this.container) {
+                    this.container.requestPointerLock();
+                }
+            });
+        }
 
         // Start Loop
         window.gameEngine = this;

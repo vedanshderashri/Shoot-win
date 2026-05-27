@@ -24,22 +24,33 @@ class SceneManager {
     }
 
     setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
         this.scene.add(ambientLight);
 
+        // Soft hemisphere light for smooth ambient fill
+        const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x3a2a1a, 0.6);
+        this.scene.add(hemiLight);
+
         // Warm desert sun
-        const dirLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+        const dirLight = new THREE.DirectionalLight(0xffeedd, 2.2);
         dirLight.position.set(50, 100, 50);
         dirLight.castShadow = true;
-        // Optimization for shadows
-        dirLight.shadow.mapSize.width = 1024;
-        dirLight.shadow.mapSize.height = 1024;
+
+        // Higher resolution shadows for smoother edges
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
         dirLight.shadow.camera.near = 0.5;
-        dirLight.shadow.camera.far = 150;
-        dirLight.shadow.camera.left = -50;
-        dirLight.shadow.camera.right = 50;
-        dirLight.shadow.camera.top = 50;
-        dirLight.shadow.camera.bottom = -50;
+        dirLight.shadow.camera.far = 200;
+        dirLight.shadow.camera.left = -60;
+        dirLight.shadow.camera.right = 60;
+        dirLight.shadow.camera.top = 60;
+        dirLight.shadow.camera.bottom = -60;
+
+        // Soft shadow blur (works with VSMShadowMap)
+        dirLight.shadow.radius = 4;
+        dirLight.shadow.blurSamples = 16;
+        dirLight.shadow.bias = -0.0005;
+
         this.scene.add(dirLight);
     }
 }

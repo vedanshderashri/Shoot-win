@@ -2,6 +2,7 @@ import Rifle from './rifle';
 import * as THREE from 'three';
 import sceneManager from '../engine/scene';
 import { Grenade } from './grenade';
+import { isMobile } from '../player/touchControls';
 
 export default class WeaponSystem {
     constructor(scene, camera, socket, onAmmoChange, onHitmarker, onGrenadeChange) {
@@ -145,7 +146,7 @@ export default class WeaponSystem {
         if (this.currentWeapon) {
             this.currentWeapon.update(dt);
 
-            if (!this.isDead && this.isMouseDown && document.pointerLockElement) {
+            if (!this.isDead && this.isMouseDown && (document.pointerLockElement || isMobile)) {
                 this.currentWeapon.shoot();
             }
         }
