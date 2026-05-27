@@ -61,22 +61,17 @@ function App() {
         }
     };
 
-    const handleJoinRoom = () => {
+    const handleJoinRoom = async () => {
         const name = playerName.trim() || 'Ghost';
         const code = joinCode.trim().toUpperCase();
         if (!code || code.length < 4) { setJoinError('INVALID ROOM CODE'); return; }
 
         try {
             gameEngine.init(canvasContainerRef.current, code, gameCallbacks);
-            const socket = gameEngine.getSocket();
-            socket.on('join_error', (data) => {
-                setJoinError(data.message.toUpperCase());
-                setScreen('join');
-            });
-            socket.on('room_joined', () => startGame(code));
-            gameEngine.joinRoom(code, name);
+            await gameEngine.joinRoom(code, name);
+            startGame(code);
         } catch (err) {
-            setJoinError('JOIN FAILED');
+            setJoinError(err.message.toUpperCase());
         }
     };
 

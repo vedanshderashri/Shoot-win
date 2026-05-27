@@ -246,7 +246,35 @@ class GameEngine {
     }
 
     joinRoom(code, name) {
-        this.socket.emit('join_room', { code, name });
+        return new Promise((resolve, reject) => {
+            if (!this.socket.connected) {
+                reject(new Error('Socket not connected'));
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                this.socket.off('room_joined');
+                this.socket.off('join_error');
+                reject(new Error('Connection timed out. Please try again.'));
+            }, 10000);
+
+            this.socket.emit('join_room', { code, name });
+
+            const onJoined = (data) => {
+                clearTimeout(timeout);
+                this.socket.off('join_error', onError);
+                resolve(data.code);
+            };
+
+            const onError = (data) => {
+                clearTimeout(timeout);
+                this.socket.off('room_joined', onJoined);
+                reject(new Error(data.message));
+            };
+
+            this.socket.once('room_joined', onJoined);
+            this.socket.once('join_error', onError);
+        });
     }
 
     createRoom(name) {
