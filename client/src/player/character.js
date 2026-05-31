@@ -42,7 +42,6 @@ export default class Soldier {
             this.model = gltf.scene;
 
             // Soldier.glb might be slightly small or large, scaling it to fit a 2.0m tall box
-            // Typically Soldier.glb is about 1.6m tall at scale 1, let's make it 1.2 scale to match 2m
             this.model.scale.set(1.1, 1.1, 1.1);
 
             // Since the group's Y-position corresponds to camera eye-level (~1.6),
@@ -76,7 +75,22 @@ export default class Soldier {
                 this.currentAction = this.idleAction;
             }
 
-            // Create a procedural weapon and attach it to the right hand
+            // Find shoulder and arm bones for procedural arm adjustments
+            this.rightShoulder = null;
+            this.leftShoulder = null;
+            this.rightArm = null;
+            this.leftArm = null;
+            this.model.traverse(child => {
+                if (child.isBone) {
+                    const name = child.name.toLowerCase();
+                    if (name.includes('rightshoulder') || name.includes('r_shoulder')) this.rightShoulder = child;
+                    if (name.includes('leftshoulder') || name.includes('l_shoulder')) this.leftShoulder = child;
+                    if (name.includes('rightarm') || name.includes('r_arm') || (name.includes('shoulder') && name.includes('right'))) this.rightArm = child;
+                    if (name.includes('leftarm') || name.includes('l_arm') || (name.includes('shoulder') && name.includes('left'))) this.leftArm = child;
+                }
+            });
+
+            // Create procedural weapons and attach them to the right hand
             this.attachWeapon();
 
             this.isLoaded = true;
@@ -85,13 +99,83 @@ export default class Soldier {
         });
     }
 
+    createTPPRifle() {
+        const rifleGroup = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: 0x1E2922, metalness: 0.6, roughness: 0.3 }); // Military olive
+        const partsMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.7, roughness: 0.5 });
+
+        // Receiver
+        const rc = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.35), mat);
+        rc.position.set(0, 0, 0);
+        rifleGroup.add(rc);
+
+        // Barrel
+        const br = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3), partsMat);
+        br.rotation.x = Math.PI / 2;
+        br.position.set(0, 0.01, -0.325);
+        rc.add(br);
+
+        // Magazine
+        const mg = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.16, 0.06), partsMat);
+        mg.rotation.x = 0.15;
+        mg.position.set(0, -0.11, -0.08);
+        rc.add(mg);
+
+        // Stock
+        const st = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.09, 0.18), partsMat);
+        st.position.set(0, -0.01, 0.26);
+        rc.add(st);
+
+        // Scope
+        const sc = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.12), partsMat);
+        sc.rotation.x = Math.PI / 2;
+        sc.position.set(0, 0.06, -0.05);
+        rc.add(sc);
+
+        return rifleGroup;
+    }
+
+    createTPPSniper() {
+        const sniperGroup = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, metalness: 0.8, roughness: 0.1 }); // Steel black
+        const partsMat = new THREE.MeshStandardMaterial({ color: 0x4B5320, roughness: 0.95 }); // Olive green chassis details
+
+        // Heavy chassis
+        const rc = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.1, 0.45), partsMat);
+        rc.position.set(0, 0, 0);
+        sniperGroup.add(rc);
+
+        // Long heavy steel barrel
+        const br = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.55), mat);
+        br.rotation.x = Math.PI / 2;
+        br.position.set(0, 0.02, -0.5);
+        rc.add(br);
+
+        // Huge scope
+        const sc = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.18), mat);
+        sc.rotation.x = Math.PI / 2;
+        sc.position.set(0, 0.085, -0.05);
+        rc.add(sc);
+
+        // Huge magazine
+        const mg = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.22, 0.08), mat);
+        mg.position.set(0, -0.15, -0.02);
+        rc.add(mg);
+
+        // Heavy Stock
+        const st = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.12, 0.25), partsMat);
+        st.position.set(0, -0.02, 0.35);
+        rc.add(st);
+
+        return sniperGroup;
+    }
+
     attachWeapon() {
         // Find RightHand bone - expanded search criteria
         let rightHand = null;
         this.model.traverse(child => {
             if (child.isBone) {
                 const name = child.name.toLowerCase();
-                // Match "right" and ("hand", "wrist", "palm", "arm", or naming suffixes like .r or _r)
                 const isRight = name.includes('right') || name.includes('_r') || name.includes('.r');
                 const isHand = name.includes('hand') || name.includes('wrist') || name.includes('palm') || name.includes('arm');
 
@@ -101,60 +185,71 @@ export default class Soldier {
             }
         });
 
-        const gunMat = new THREE.MeshStandardMaterial({
-            color: 0x333333, // Slightly lighter than before
-            metalness: 0.8,
-            roughness: 0.2,
-            emissive: 0x111111 // Add a tiny bit of emissive to prevent total pitch blackness
+        // 1. Build TPP Rifle Group
+        this.tppRifle = this.createTPPRifle();
+        this.tppRifle.traverse(c => {
+            if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
         });
 
-        this.weaponGroup = new THREE.Group();
-
-        // Receiver
-        const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.15, 0.5), gunMat);
-        this.weaponGroup.add(receiver);
-
-        // Barrel
-        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4), gunMat);
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.set(0, 0.03, 0.45);
-        receiver.add(barrel);
-
-        // Magazine
-        const mag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.25, 0.1), gunMat);
-        mag.position.set(0, -0.2, 0.05);
-        receiver.add(mag);
-
-        // Scope (simplified for opponent)
-        const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.15), gunMat);
-        scope.rotation.x = Math.PI / 2;
-        scope.position.set(0, 0.12, 0);
-        receiver.add(scope);
-
-        // Enable shadows for all weapon parts
-        this.weaponGroup.traverse(child => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
+        // 2. Build TPP Sniper Group
+        this.tppSniper = this.createTPPSniper();
+        this.tppSniper.traverse(c => {
+            if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
         });
+
+        // Visible weapon status tracks
+        this.activeWeaponName = 'Rifle';
+        this.currentRifleScale = 1.0;
+        this.currentSniperScale = 0.0;
+        this.tppRecoilOffset = 0.0;
+
+        // Aiming, reloading states
+        this.tppIsAiming = false;
+        this.tppIsReloading = false;
+
+        // Default weapon visible scales
+        this.tppRifle.scale.set(1, 1, 1);
+        this.tppSniper.scale.set(0, 0, 0);
 
         if (rightHand) {
-            rightHand.add(this.weaponGroup);
-            // Mixamo models usually need this offset
-            this.weaponGroup.position.set(0, 0.2, 0);
-            this.weaponGroup.rotation.set(Math.PI / 2, -Math.PI / 2, 0);
-            this.weaponGroup.scale.set(1, 1, 1);
+            rightHand.add(this.tppRifle);
+            rightHand.add(this.tppSniper);
+
+            // Positioning relative to rightHand
+            this.tppRifle.position.set(0, 0.2, 0);
+            this.tppRifle.rotation.set(Math.PI / 2, -Math.PI / 2, 0);
+
+            this.tppSniper.position.set(-0.02, 0.25, -0.05);
+            this.tppSniper.rotation.set(Math.PI / 1.8, -Math.PI / 2, 0.1);
         } else {
-            // Fallback: Attach to model root at chest height, slightly to the right
-            this.model.add(this.weaponGroup);
-            this.weaponGroup.position.set(0.4, 1.2, 0.5);
-            this.weaponGroup.rotation.y = Math.PI; // Point forward
-            this.weaponGroup.scale.set(1.2, 1.2, 1.2); // Make it slightly bigger to be sure
+            // Fallback: Attach to model root
+            this.model.add(this.tppRifle);
+            this.model.add(this.tppSniper);
+
+            this.tppRifle.position.set(0.4, 1.2, 0.5);
+            this.tppRifle.rotation.set(0, Math.PI, 0);
+
+            this.tppSniper.position.set(0.4, 1.2, 0.5);
+            this.tppSniper.rotation.set(0, Math.PI, 0);
         }
     }
 
-     animate(isMoving, dt) {
+    setEquippedWeapon(weaponName) {
+        if (!this.isLoaded) return;
+        this.activeWeaponName = weaponName;
+    }
+
+    setAiming(isAiming) {
+        if (!this.isLoaded) return;
+        this.tppIsAiming = isAiming;
+    }
+
+    setReloading(isReloading) {
+        if (!this.isLoaded) return;
+        this.tppIsReloading = isReloading;
+    }
+
+    animate(isMoving, dt) {
         if (!this.isLoaded || !this.mixer) return;
 
         this.mixer.update(dt);
@@ -191,6 +286,65 @@ export default class Soldier {
             this.muzzleFlash.intensity = Math.max(0, this.muzzleFlash.intensity - dt * 40);
         }
 
+        // Animate visual weapon switches (lerp weapon scales)
+        const targetRifleScale = this.activeWeaponName === 'Rifle' ? 1.0 : 0.0;
+        const targetSniperScale = this.activeWeaponName === 'Sniper' ? 1.0 : 0.0;
+
+        this.currentRifleScale = THREE.MathUtils.lerp(this.currentRifleScale || 0, targetRifleScale, dt * 12);
+        this.currentSniperScale = THREE.MathUtils.lerp(this.currentSniperScale || 0, targetSniperScale, dt * 12);
+
+        if (this.tppRifle) {
+            this.tppRifle.scale.set(this.currentRifleScale, this.currentRifleScale, this.currentRifleScale);
+        }
+        if (this.tppSniper) {
+            this.tppSniper.scale.set(this.currentSniperScale, this.currentSniperScale, this.currentSniperScale);
+        }
+
+        // Decay recoil kickback inside right hand
+        this.tppRecoilOffset = THREE.MathUtils.lerp(this.tppRecoilOffset || 0, 0, dt * 15);
+        if (this.tppRifle) {
+            this.tppRifle.position.z = 0.2 + this.tppRecoilOffset; // base z is 0.2
+        }
+        if (this.tppSniper) {
+            this.tppSniper.position.z = -0.05 + this.tppRecoilOffset; // base z is -0.05
+        }
+
+        // Procedural holding poses
+        let targetRightArmRotX = 0;
+        let targetLeftArmRotX = 0;
+
+        if (this.activeWeaponName) {
+            if (this.tppIsAiming) {
+                // Raise weapon forward and upward to aim down sights in TPP
+                targetRightArmRotX = -1.1;
+                targetLeftArmRotX = -0.9;
+            } else if (this.tppIsReloading) {
+                // Dip weapon downward to chest height for reload animation
+                targetRightArmRotX = 0.2;
+                targetLeftArmRotX = 0.4;
+            } else if (this.activeWeaponName === 'Rifle') {
+                targetRightArmRotX = -0.35;
+                targetLeftArmRotX = -0.2;
+            } else if (this.activeWeaponName === 'Sniper') {
+                targetRightArmRotX = -0.55;
+                targetLeftArmRotX = -0.4;
+            }
+        }
+
+        // Breathing sway
+        const breathingOffset = Math.sin(performance.now() / 600) * 0.035;
+        if (this.activeWeaponName && !this.tppIsAiming && !this.tppIsReloading) {
+            targetRightArmRotX += breathingOffset;
+        }
+
+        // Smooth bone rotation injection
+        if (this.rightArm) {
+            this.rightArm.rotation.x = THREE.MathUtils.lerp(this.rightArm.rotation.x, targetRightArmRotX, dt * 10);
+        }
+        if (this.leftArm) {
+            this.leftArm.rotation.x = THREE.MathUtils.lerp(this.leftArm.rotation.x, targetLeftArmRotX, dt * 10);
+        }
+
         const targetAction = isMoving ? this.walkAction : this.idleAction;
 
         if (this.currentAction !== targetAction && targetAction) {
@@ -204,19 +358,39 @@ export default class Soldier {
     }
 
     triggerMuzzleFlash() {
-        if (!this.isLoaded || !this.weaponGroup) return;
+        if (!this.isLoaded) return;
+
+        const activeWeapon = this.activeWeaponName === 'Rifle' ? this.tppRifle : this.tppSniper;
+        if (!activeWeapon) return;
 
         if (!this.muzzleFlash) {
             this.muzzleFlash = new THREE.PointLight(0xff9900, 0, 8);
-            // Position muzzle flash near weapon muzzle relative to right hand
-            this.muzzleFlash.position.set(0, 0.4, 0.4); 
-            this.weaponGroup.add(this.muzzleFlash);
+            this.scene.add(this.muzzleFlash);
         }
 
+        const worldPos = new THREE.Vector3();
+        if (this.activeWeaponName === 'Rifle') {
+            const muzzle = new THREE.Object3D();
+            muzzle.position.set(0, 0.01, -0.5);
+            activeWeapon.add(muzzle);
+            muzzle.getWorldPosition(worldPos);
+            activeWeapon.remove(muzzle);
+        } else {
+            const muzzle = new THREE.Object3D();
+            muzzle.position.set(0, 0.02, -0.8);
+            activeWeapon.add(muzzle);
+            muzzle.getWorldPosition(worldPos);
+            activeWeapon.remove(muzzle);
+        }
+
+        this.muzzleFlash.position.copy(worldPos);
         this.muzzleFlash.intensity = 5;
+
+        // Physical weapon kickback reaction
+        this.tppRecoilOffset = 0.08;
     }
 
-     updatePosition(x, y, z, rotation) {
+    updatePosition(x, y, z, rotation) {
         if (!this.hasInitializedPositions) {
             this.group.position.set(x, y, z);
             this.group.rotation.y = rotation;
@@ -238,6 +412,8 @@ export default class Soldier {
         if (this.muzzleFlash && this.muzzleFlash.parent) {
             this.muzzleFlash.parent.remove(this.muzzleFlash);
         }
+        if (this.tppRifle && this.tppRifle.parent) this.tppRifle.parent.remove(this.tppRifle);
+        if (this.tppSniper && this.tppSniper.parent) this.tppSniper.parent.remove(this.tppSniper);
         this.scene.remove(this.group);
     }
 }

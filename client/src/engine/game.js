@@ -140,6 +140,17 @@ class GameEngine {
             if (this.players[data.id] && this.players[data.id].character) {
                 const p = this.players[data.id];
                 p.character.updatePosition(data.x, data.y, data.z, data.rotation);
+                
+                if (data.weapon !== undefined) {
+                    p.character.setEquippedWeapon(data.weapon);
+                }
+                if (data.aiming !== undefined) {
+                    p.character.setAiming(data.aiming);
+                }
+                if (data.reloading !== undefined) {
+                    p.character.setReloading(data.reloading);
+                }
+                
                 p.lastMoveTime = performance.now();
                 p.isMoving = true;
             }

@@ -89,6 +89,16 @@ export default class PlayerModel {
                 this.character.targetRotation = rot;
 
                 const isMoving = this.controls.keys.w || this.controls.keys.a || this.controls.keys.s || this.controls.keys.d;
+                
+                // Pass weapon states from window.gameEngine.weaponSystem
+                const ws = window.gameEngine?.weaponSystem;
+                if (ws) {
+                    const activeWeaponName = ws.activeWeaponIndex === 0 ? 'Rifle' : 'Sniper';
+                    this.character.setEquippedWeapon(activeWeaponName);
+                    this.character.setAiming(ws.isAiming);
+                    this.character.setReloading(ws.currentWeapon?.isReloading || false);
+                }
+
                 this.character.animate(isMoving, dt);
 
                 // Snap again after animate to override lerping inside character.animate

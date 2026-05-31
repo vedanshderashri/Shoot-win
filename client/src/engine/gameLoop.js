@@ -61,12 +61,35 @@ class GameLoop {
 
     networkSync() {
         const lp = this.entities.localPlayer;
-        if (lp && lp.hasMoved()) {
+        const ws = this.entities.weaponSystem;
+        if (lp) {
             const pos = lp.getPosition();
             const rot = lp.getRotation();
-            this.entities.socket.emit('player_move', {
-                x: pos.x, y: pos.y, z: pos.z, rotation: rot
-            });
+            
+            const weaponType = ws ? (ws.activeWeaponIndex === 0 ? 'Rifle' : 'Sniper') : 'Rifle';
+            const aimingState = ws ? ws.isAiming : false;
+            const reloadingState = ws ? (ws.currentWeapon?.isReloading || false) : false;
+
+            const moved = lp.hasMoved();
+            const weaponSwitched = this.lastSyncedWeapon !== weaponType;
+            const aimingChanged = this.lastSyncedAiming !== aimingState;
+            const reloadingChanged = this.lastSyncedReloading !== reloadingState;
+
+            if (moved || weaponSwitched || aimingChanged || reloadingChanged) {
+                this.entities.socket.emit('player_move', {
+                    x: pos.x,
+                    y: pos.y,
+                    z: pos.z,
+                    rotation: rot,
+                    weapon: weaponType,
+                    aiming: aimingState,
+                    reloading: reloadingState
+                });
+                
+                this.lastSyncedWeapon = weaponType;
+                this.lastSyncedAiming = aimingState;
+                this.lastSyncedReloading = reloadingState;
+            }
         }
     }
 

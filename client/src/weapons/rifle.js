@@ -171,6 +171,40 @@ export default class Rifle {
         this.muzzlePos = new THREE.Object3D();
         this.muzzlePos.position.set(0, 0.045, -0.85); // End of suppressor
         this.gunBody.add(this.muzzlePos);
+
+        // Procedural FPP Arms holding the Assault Rifle
+        const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x1A231F, roughness: 0.95 });
+        const gloveMat = new THREE.MeshStandardMaterial({ color: 0x8A7253, roughness: 0.75 });
+
+        // Right Hand (grip) & Arm Sleeve
+        const fppRightHand = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.055, 0.055), gloveMat);
+        fppRightHand.position.set(0, -0.1, 0.08);
+        fppRightHand.castShadow = true;
+        fppRightHand.receiveShadow = true;
+        this.gunBody.add(fppRightHand);
+
+        const fppRightSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.35, 8), sleeveMat);
+        fppRightSleeve.rotation.x = -0.5;
+        fppRightSleeve.rotation.z = 0.5;
+        fppRightSleeve.position.set(0.12, -0.22, 0.22);
+        fppRightSleeve.castShadow = true;
+        fppRightSleeve.receiveShadow = true;
+        this.gunBody.add(fppRightSleeve);
+
+        // Left Hand (handguard) & Arm Sleeve
+        const fppLeftHand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.06), gloveMat);
+        fppLeftHand.position.set(0, 0.045, -0.3);
+        fppLeftHand.castShadow = true;
+        fppLeftHand.receiveShadow = true;
+        this.gunBody.add(fppLeftHand);
+
+        const fppLeftSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.35, 8), sleeveMat);
+        fppLeftSleeve.rotation.x = -0.4;
+        fppLeftSleeve.rotation.z = -0.6;
+        fppLeftSleeve.position.set(-0.16, -0.16, -0.12);
+        fppLeftSleeve.castShadow = true;
+        fppLeftSleeve.receiveShadow = true;
+        this.gunBody.add(fppLeftSleeve);
     }
 
     reload() {
@@ -273,6 +307,22 @@ export default class Rifle {
 
         this.currentRecoil = THREE.MathUtils.lerp(this.currentRecoil, 0, dt * 5);
 
+        // Fetch local player movement states
+        const lp = window.gameEngine?.localPlayer;
+        const isMoving = lp?.controls?.keys?.w || lp?.controls?.keys?.a || lp?.controls?.keys?.s || lp?.controls?.keys?.d;
+        const isSprinting = isMoving && lp?.controls?.keys?.shift && lp?.movement?.stamina > 0 && lp?.controls?.canJump;
+        const isJumping = lp && !lp.controls.canJump;
+
+        // Procedural figure-8 walk/sprint weapon bobbing
+        let bobX = 0;
+        let bobY = 0;
+        if (isMoving && !this.isAiming && !isJumping) {
+            const speedScale = isSprinting ? 1.6 : 1.0;
+            const bobTime = performance.now() * 0.008 * speedScale;
+            bobX = Math.sin(bobTime) * (isSprinting ? 0.025 : 0.015);
+            bobY = Math.cos(bobTime * 2) * (isSprinting ? 0.018 : 0.01);
+        }
+
         // Aiming transitions
         if (this.isAiming && !this.isReloading) {
             if (this.gunBody) this.gunBody.visible = false;
@@ -285,12 +335,21 @@ export default class Rifle {
             this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, this.baseFov, dt * 10);
             const targetPos = this.basePosition.clone();
 
+            targetPos.x += bobX;
+            targetPos.y += bobY;
+
             if (this.isReloading) {
                 // Procedural reload animation: rotate gun downward
                 targetPos.y -= 0.3;
                 this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, -Math.PI / 4, dt * 5);
+            } else if (isJumping) {
+                // Jump lean: pull weapon down and tilt
+                targetPos.y -= 0.06;
+                this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, -0.08, dt * 5);
+                this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, 0.06, dt * 5);
             } else {
                 this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, 0, dt * 10);
+                this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, 0, dt * 10);
             }
 
             this.mesh.position.lerp(targetPos, dt * 10);
@@ -300,7 +359,10 @@ export default class Rifle {
         // Apply recoil visually on top of base/aim position
         if (!this.isReloading) {
             this.mesh.position.z = THREE.MathUtils.lerp(this.mesh.position.z, this.isAiming ? this.aimPosition.z : this.basePosition.z, dt * 10);
-            this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, 0, dt * 10);
+            if (!isJumping) {
+                this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, 0, dt * 10);
+                this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, 0, dt * 10);
+            }
         }
     }
 }
