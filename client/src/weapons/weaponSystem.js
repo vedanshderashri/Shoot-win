@@ -1,16 +1,27 @@
 import Rifle from './rifle';
+import Sniper from './sniper';
 import * as THREE from 'three';
 import sceneManager from '../engine/scene';
 import { Grenade } from './grenade';
 import { isMobile } from '../player/touchControls';
 
 export default class WeaponSystem {
-    constructor(scene, camera, socket, onAmmoChange, onHitmarker, onGrenadeChange) {
+    constructor(scene, camera, socket, onAmmoChange, onHitmarker, onGrenadeChange, onWeaponChange) {
         this.scene = scene;
         this.camera = camera;
         this.socket = socket;
         this.onGrenadeChange = onGrenadeChange;
-        this.currentWeapon = new Rifle(scene, camera, socket, onAmmoChange, onHitmarker);
+        this.onWeaponChange = onWeaponChange; // Callback to notify App.jsx of weapon changes
+
+        this.rifle = new Rifle(scene, camera, socket, onAmmoChange, onHitmarker);
+        this.sniper = new Sniper(scene, camera, socket, onAmmoChange, onHitmarker);
+
+        // Hide sniper model initially
+        this.sniper.mesh.visible = false;
+
+        this.weapons = [this.rifle, this.sniper];
+        this.activeWeaponIndex = 0;
+        this.currentWeapon = this.rifle;
 
         this.isMouseDown = false;
         this.isAiming = false;
@@ -32,6 +43,33 @@ export default class WeaponSystem {
         if (this.onGrenadeChange) this.onGrenadeChange(this.grenadesLeft);
     }
 
+    switchWeapon(index) {
+        if (this.isDead || index === this.activeWeaponIndex || index < 0 || index >= this.weapons.length) return;
+
+        // Hide current weapon and reset its aiming state
+        this.currentWeapon.mesh.visible = false;
+        this.currentWeapon.setAiming(false);
+
+        // Reset camera FOV
+        this.camera.fov = this.currentWeapon.baseFov;
+        this.camera.updateProjectionMatrix();
+
+        // Switch to new weapon
+        this.activeWeaponIndex = index;
+        this.currentWeapon = this.weapons[this.activeWeaponIndex];
+        this.currentWeapon.mesh.visible = true;
+
+        console.log(`Switched to weapon index ${index}: ${this.activeWeaponIndex === 0 ? 'Assault Rifle' : 'Sniper Rifle'}`);
+
+        // Update HUD callbacks
+        if (this.currentWeapon.onAmmoChange) {
+            this.currentWeapon.onAmmoChange(this.currentWeapon.ammo);
+        }
+        if (this.onWeaponChange) {
+            this.onWeaponChange(this.activeWeaponIndex === 0 ? 'Rifle' : 'Sniper');
+        }
+    }
+
     onKeyDown(event) {
         if (this.isDead) return;
         if (event.code === 'KeyR') {
@@ -41,6 +79,10 @@ export default class WeaponSystem {
             if (this.onGrenadeChange) this.onGrenadeChange(this.grenadesLeft);
         } else if (event.code === 'KeyG') {
             this.throwGrenade();
+        } else if (event.code === 'Digit1') {
+            this.switchWeapon(0);
+        } else if (event.code === 'Digit2') {
+            this.switchWeapon(1);
         }
     }
 

@@ -3,6 +3,11 @@ class PlayerManager {
         this.players = {};
         this.MAX_HP = 100;
         this.RESPAWN_TIME = 3000;
+        this.io = null;
+    }
+
+    setIo(io) {
+        this.io = io;
     }
 
     addPlayer(id, name, roomCode) {
@@ -109,6 +114,17 @@ class PlayerManager {
                 p.x = signX * (20 + Math.random() * 20);
                 p.z = signZ * (20 + Math.random() * 20);
                 p.y = 2;
+
+                if (this.io && p.roomCode) {
+                    console.log(`Server-authoritative respawn for ${p.id} at x:${p.x.toFixed(1)}, z:${p.z.toFixed(1)}`);
+                    this.io.to(p.roomCode).emit('player_respawn', {
+                        id: p.id,
+                        x: p.x,
+                        y: p.y,
+                        z: p.z,
+                        hp: p.hp
+                    });
+                }
             }
         }
     }

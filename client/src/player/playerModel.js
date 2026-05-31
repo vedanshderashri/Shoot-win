@@ -64,11 +64,5 @@ export default class PlayerModel {
         this.isDead = true;
         this.pitchObject.rotation.x = Math.PI / 2;
         this.body.velocity.set(0, 0, 0);
-
-        setTimeout(() => {
-            this.isDead = false;
-            this.body.position.set((Math.random() - 0.5) * 20, 5, (Math.random() - 0.5) * 20);
-            this.pitchObject.rotation.x = 0;
-        }, 3000);
     }
 }

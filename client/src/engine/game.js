@@ -13,6 +13,7 @@ import { buildCQBMap } from '../maps/cqbMap';
 import { buildArcticMap } from '../maps/arcticMap';
 import Soldier from '../player/character';
 import { isMobile } from '../player/touchControls';
+import soundSystem from './soundSystem';
 
 class GameEngine {
     constructor() {
@@ -57,34 +58,8 @@ class GameEngine {
 
         this.clock = new THREE.Clock();
 
-        // ── Map Selection ──
-        // Defaulting to the original Warzone map as requested.
-        const selectedMap = 'warzone'; // Options: 'warzone', 'desert', 'cqb', 'arctic'
-        console.log(`[Map] Loading map: ${selectedMap.toUpperCase()}`);
-
-        this.animateMap = null; // Generic map animate function
-        switch (selectedMap) {
-            case 'warzone': {
-                const { animateWarzone } = buildWarzoneMap(this.scene, this.world, this.physicsMaterial);
-                this.animateMap = animateWarzone;
-                break;
-            }
-            case 'desert': {
-                const { animateDesert } = buildAdvancedMap(this.scene, this.world, this.physicsMaterial);
-                this.animateMap = animateDesert;
-                break;
-            }
-            case 'cqb': {
-                const { animateCQB } = buildCQBMap(this.scene, this.world, this.physicsMaterial);
-                this.animateMap = animateCQB;
-                break;
-            }
-            case 'arctic': {
-                const { animateArctic } = buildArcticMap(this.scene, this.world, this.physicsMaterial);
-                this.animateMap = animateArctic;
-                break;
-            }
-        }
+        this.mapLoaded = false;
+        this.animateMap = null;
 
         // Start ambient war audio (requires user interaction first — deferred to resume)
         this.ambientAudio = new AmbientWarAudio();
@@ -100,7 +75,7 @@ class GameEngine {
         this.localPlayer = new PlayerModel(this.scene, this.camera, this.world, this.physicsMaterial, this.callbacks.onStaminaChange);
 
         // Setup Weapon System
-        this.weaponSystem = new WeaponSystem(this.scene, this.camera, this.socket, this.callbacks.onAmmoChange, this.callbacks.onHitmarker, this.callbacks.onGrenadeChange);
+        this.weaponSystem = new WeaponSystem(this.scene, this.camera, this.socket, this.callbacks.onAmmoChange, this.callbacks.onHitmarker, this.callbacks.onGrenadeChange, this.callbacks.onWeaponChange);
 
         this.setupNetworkEvents();
 
@@ -132,11 +107,14 @@ class GameEngine {
         this.socket.off('scores_update');
         this.socket.off('sync_state');
         this.socket.off('player_throw_grenade');
+        this.socket.off('player_shot');
+        this.socket.off('player_respawn');
         this.socket.off('game_over');
 
         // Listen for room join confirmation
         this.socket.on('room_joined', (data) => {
-            console.log(`Joined room ${data.code}`);
+            console.log(`Joined room ${data.code} with map ${data.map}`);
+            this.loadMap(data.map);
             for (let id in data.players) {
                 if (id !== this.socket.id) {
                     this.addRemotePlayer(data.players[id]);
@@ -145,7 +123,8 @@ class GameEngine {
         });
 
         this.socket.on('room_created', (data) => {
-            console.log(`Created room ${data.code}`);
+            console.log(`Created room ${data.code} with map ${data.map}`);
+            this.loadMap(data.map);
         });
 
         this.socket.on('player_joined', (playerData) => {
@@ -227,6 +206,37 @@ class GameEngine {
             }
         });
 
+        this.socket.on('player_shot', (data) => {
+            if (data.id === this.socket.id) return; // Ignore local player shoots (played immediately)
+            if (this.players[data.id] && this.players[data.id].character) {
+                this.players[data.id].character.triggerMuzzleFlash();
+                soundSystem.playShootSound();
+            }
+        });
+
+        this.socket.on('player_respawn', (data) => {
+            console.log(`[Network] Player respawn:`, data);
+            if (data.id === this.socket.id) {
+                if (this.callbacks.onHealthChange) {
+                    this.callbacks.onHealthChange(data.hp);
+                }
+                if (this.localPlayer) {
+                    this.localPlayer.isDead = false;
+                    this.localPlayer.body.position.set(data.x, data.y, data.z);
+                    this.localPlayer.body.velocity.set(0, 0, 0);
+                    this.localPlayer.pitchObject.rotation.x = 0;
+                }
+            } else {
+                if (this.players[data.id]) {
+                    const p = this.players[data.id];
+                    if (p.character) {
+                        p.character.updatePosition(data.x, data.y, data.z, p.character.targetRotation);
+                        p.character.setVisible(true);
+                    }
+                }
+            }
+        });
+
         this.socket.on('game_over', (data) => {
             if (this.callbacks.onGameOver) {
                 this.callbacks.onGameOver(data);
@@ -277,7 +287,39 @@ class GameEngine {
         });
     }
 
-    createRoom(name) {
+    loadMap(mapName) {
+        if (this.mapLoaded) return;
+        this.mapLoaded = true;
+
+        const selectedMap = mapName || 'warzone';
+        console.log(`[Map] Loading dynamically: ${selectedMap.toUpperCase()}`);
+
+        this.animateMap = null; // Generic map animate function
+        switch (selectedMap) {
+            case 'warzone': {
+                const { animateWarzone } = buildWarzoneMap(this.scene, this.world, this.physicsMaterial);
+                this.animateMap = animateWarzone;
+                break;
+            }
+            case 'desert': {
+                const { animateDesert } = buildAdvancedMap(this.scene, this.world, this.physicsMaterial);
+                this.animateMap = animateDesert;
+                break;
+            }
+            case 'cqb': {
+                const { animateCQB } = buildCQBMap(this.scene, this.world, this.physicsMaterial);
+                this.animateMap = animateCQB;
+                break;
+            }
+            case 'arctic': {
+                const { animateArctic } = buildArcticMap(this.scene, this.world, this.physicsMaterial);
+                this.animateMap = animateArctic;
+                break;
+            }
+        }
+    }
+
+    createRoom(name, map) {
         return new Promise((resolve, reject) => {
             if (!this.socket.connected) {
                 reject(new Error('Socket not connected'));
@@ -288,7 +330,7 @@ class GameEngine {
                 reject(new Error('Connection timed out. Please try again.'));
             }, 10000);
 
-            this.socket.emit('create_room', { name });
+            this.socket.emit('create_room', { name, map });
             this.socket.once('room_created', (data) => {
                 clearTimeout(timeout);
                 resolve(data.code);

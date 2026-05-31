@@ -1633,4 +1633,68 @@ html {
     width: 42px;
     height: 42px;
   }
+}
+
+/* ════════ MAP SELECTION IN LOBBY ════════ */
+.map-selection-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.map-select-card {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--mil-border);
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-select-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.map-select-card.active {
+  background: rgba(180, 210, 120, 0.08);
+  border: 1px solid var(--mil-amber);
+  box-shadow: 0 0 12px rgba(180, 210, 120, 0.15);
+}
+
+.map-select-card.active::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  color: var(--mil-amber);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.map-select-name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: var(--text-bright);
+}
+
+.map-select-card.active .map-select-name {
+  color: var(--mil-amber);
+}
+
+.map-select-desc {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-transform: uppercase;
 }

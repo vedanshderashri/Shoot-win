@@ -7,6 +7,12 @@ export default class Soldier {
         this.scene = scene;
         this.scene.add(this.group);
 
+        // Network movement interpolation properties
+        this.targetPosition = new THREE.Vector3();
+        this.targetRotation = 0;
+        this.hasInitializedPositions = false;
+        this.muzzleFlash = null;
+
         // A hidden hitbox for raycasting compat (headshots check localHit.y > 0.6)
         // By using this hitbox, we ensure game.js can synchronously assign userData.id
         // and rifle raycasting hits something predictable regardless of GLTF bones.
@@ -152,6 +158,19 @@ export default class Soldier {
 
         this.mixer.update(dt);
 
+        // Interpolate position
+        this.group.position.lerp(this.targetPosition, dt * 15);
+
+        // Interpolate rotation with angular wrapping to prevent full spins
+        let diff = this.targetRotation - this.group.rotation.y;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        this.group.rotation.y += diff * dt * 15;
+
+        // Decay muzzle flash if alive
+        if (this.muzzleFlash && this.muzzleFlash.intensity > 0) {
+            this.muzzleFlash.intensity = Math.max(0, this.muzzleFlash.intensity - dt * 40);
+        }
+
         const targetAction = isMoving ? this.walkAction : this.idleAction;
 
         if (this.currentAction !== targetAction && targetAction) {
@@ -164,9 +183,30 @@ export default class Soldier {
         }
     }
 
+    triggerMuzzleFlash() {
+        if (!this.isLoaded || !this.weaponGroup) return;
+
+        if (!this.muzzleFlash) {
+            this.muzzleFlash = new THREE.PointLight(0xff9900, 0, 8);
+            // Position muzzle flash near weapon muzzle relative to right hand
+            this.muzzleFlash.position.set(0, 0.4, 0.4); 
+            this.weaponGroup.add(this.muzzleFlash);
+        }
+
+        this.muzzleFlash.intensity = 5;
+    }
+
     updatePosition(x, y, z, rotation) {
-        this.group.position.set(x, y, z);
-        this.group.rotation.y = rotation;
+        if (!this.hasInitializedPositions) {
+            this.group.position.set(x, y, z);
+            this.group.rotation.y = rotation;
+            this.targetPosition.copy(this.group.position);
+            this.targetRotation = rotation;
+            this.hasInitializedPositions = true;
+            return;
+        }
+        this.targetPosition.set(x, y, z);
+        this.targetRotation = rotation;
     }
 
     setVisible(visible) {
@@ -174,6 +214,9 @@ export default class Soldier {
     }
 
     cleanup() {
+        if (this.muzzleFlash && this.muzzleFlash.parent) {
+            this.muzzleFlash.parent.remove(this.muzzleFlash);
+        }
         this.scene.remove(this.group);
     }
 }

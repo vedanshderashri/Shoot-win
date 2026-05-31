@@ -11,6 +11,8 @@ function App() {
     const [joinError, setJoinError] = useState('');
     const [winnerData, setWinnerData] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [activeWeapon, setActiveWeapon] = useState('Rifle');
+    const [selectedMap, setSelectedMap] = useState('warzone');
 
     const [health, setHealth] = useState(100);
     const [stamina, setStamina] = useState(100);
@@ -44,7 +46,8 @@ function App() {
         onStaminaChange: (s) => setStamina(s),
         onKillFeed: (msg) => displayKillFeed(msg),
         onScoresUpdate: (s) => setScores(s),
-        onGameOver: (data) => { setWinnerData(data); setScreen('gameover'); document.exitPointerLock(); }
+        onGameOver: (data) => { setWinnerData(data); setScreen('gameover'); document.exitPointerLock(); },
+        onWeaponChange: (w) => setActiveWeapon(w)
     };
 
     const startGame = (code) => { setRoomCode(code); setScreen('playing'); };
@@ -53,7 +56,7 @@ function App() {
         const name = playerName.trim() || 'Ghost';
         try {
             gameEngine.init(canvasContainerRef.current, '', gameCallbacks);
-            const code = await gameEngine.createRoom(name);
+            const code = await gameEngine.createRoom(name, selectedMap);
             startGame(code);
         } catch (err) {
             setJoinError(err.message.toUpperCase());
@@ -232,7 +235,28 @@ function App() {
                                     <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)}
                                         placeholder="GHOST" maxLength={16} className="mil-input" />
                                 </div>
-                                <button className="mil-btn mil-btn-primary full-w" onClick={handleCreateRoom}>
+                                <div className="mil-input-group" style={{ marginTop: '4px' }}>
+                                    <label className="mil-label">▶ SELECT THEATRE OF WAR</label>
+                                    <div className="map-selection-grid">
+                                        {[
+                                            { id: 'warzone', name: 'WARZONE', desc: 'INDUSTRIAL RUINS' },
+                                            { id: 'desert', name: 'DESERT', desc: 'CANYONS & BUNKERS' },
+                                            { id: 'cqb', name: 'CQB SQUAD', desc: 'CLOSE QUARTERS' },
+                                            { id: 'arctic', name: 'ARCTIC', desc: 'SNOWY OUTPOST' }
+                                        ].map(m => (
+                                            <button
+                                                key={m.id}
+                                                type="button"
+                                                className={`map-select-card ${selectedMap === m.id ? 'active' : ''}`}
+                                                onClick={() => setSelectedMap(m.id)}
+                                            >
+                                                <div className="map-select-name">{m.name}</div>
+                                                <div className="map-select-desc">{m.desc}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <button className="mil-btn mil-btn-primary full-w" onClick={handleCreateRoom} style={{ marginTop: '12px' }}>
                                     <span className="btn-icon">🚀</span> DEPLOY OPERATION
                                 </button>
                                 <button className="mil-btn mil-btn-ghost full-w" onClick={() => setScreen('lobby')}>
@@ -346,15 +370,15 @@ function App() {
 
                     {/* Bottom-right: Ammo readout */}
                     <div className="hud-br">
-                        <div className="weapon-name">M4A1-S // SUPPRESSED</div>
+                        <div className="weapon-name">{activeWeapon === 'Rifle' ? 'M4A1-S // PRIMARY ASSAULT' : 'AWM-50 // BOLT-ACTION SNIPER'}</div>
                         <div className="ammo-readout">
                             <div className="ammo-mag">{String(ammo).padStart(2, '0')}</div>
                             <div className="ammo-sep">/</div>
-                            <div className="ammo-reserve">30</div>
+                            <div className="ammo-reserve">{activeWeapon === 'Rifle' ? '30' : '05'}</div>
                         </div>
                         {!isMobile && (
                             <div className="ammo-bullets">
-                                {Array.from({ length: 30 }).map((_, i) => (
+                                {Array.from({ length: activeWeapon === 'Rifle' ? 30 : 5 }).map((_, i) => (
                                     <div key={i} className={`bullet-pip ${i < ammo ? 'full' : 'empty'}`}></div>
                                 ))}
                             </div>

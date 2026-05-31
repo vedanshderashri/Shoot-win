@@ -13,6 +13,7 @@ function generateRoomCode() {
 }
 
 function initNetworking(io) {
+    playerManager.setIo(io);
 
     io.on('connection', (socket) => {
         console.log(`Player connected: ${socket.id}`);
@@ -25,6 +26,7 @@ function initNetworking(io) {
             rooms[code] = {
                 players: new Set(),
                 maxPlayers: 10,
+                map: data.map || 'warzone',
                 createdAt: Date.now()
             };
 
@@ -37,10 +39,11 @@ function initNetworking(io) {
             socket.emit('room_created', {
                 code,
                 id: socket.id,
+                map: rooms[code].map,
                 players: playerManager.getPlayersInRoom(code)
             });
 
-            console.log(`Room ${code} created by ${playerName}`);
+            console.log(`Room ${code} created by ${playerName} with map ${rooms[code].map}`);
         });
 
         // Join an existing room
@@ -68,6 +71,7 @@ function initNetworking(io) {
             socket.emit('room_joined', {
                 code,
                 id: socket.id,
+                map: rooms[code].map,
                 players: playerManager.getPlayersInRoom(code)
             });
 
