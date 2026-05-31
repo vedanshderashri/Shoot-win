@@ -21,27 +21,34 @@ export default class Movement {
         this.isCrouching = false;
 
         this.raycastResult = new CANNON.RaycastResult();
+        this.spacePressedLastFrame = false;
     }
 
     update(dt, isDead) {
         if (isDead) return;
 
-        // Ground check using raycast
+        // Ground check using raycast (checks 0.15m below bottom of 0.5m radius sphere)
         const from = this.body.position.clone();
-        const to = new CANNON.Vec3(from.x, from.y - 0.6, from.z);
+        const to = new CANNON.Vec3(from.x, from.y - 0.65, from.z);
 
         this.raycastResult.reset();
         this.body.world.raycastClosest(from, to, { skipBackfaces: true }, this.raycastResult);
 
-        const isGrounded = this.raycastResult.hasHit || Math.abs(this.body.velocity.y) < 0.1;
+        const isGrounded = this.raycastResult.hasHit;
         this.controls.canJump = isGrounded;
 
         // Crouch
         this.isCrouching = !!this.controls.keys.crouch;
 
-        if (this.controls.keys.space && this.controls.canJump && !this.isCrouching) {
-            this.body.velocity.y = this.jumpVelocity;
-            this.controls.canJump = false;
+        // Enforce tap-to-jump (cannot fly by holding spacebar)
+        if (this.controls.keys.space) {
+            if (this.controls.canJump && !this.isCrouching && !this.spacePressedLastFrame) {
+                this.body.velocity.y = this.jumpVelocity;
+                this.controls.canJump = false;
+            }
+            this.spacePressedLastFrame = true;
+        } else {
+            this.spacePressedLastFrame = false;
         }
 
         const inputVector = new THREE.Vector3(0, 0, 0);

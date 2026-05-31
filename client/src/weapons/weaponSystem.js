@@ -34,10 +34,12 @@ export default class WeaponSystem {
         this.onMouseDown = this.onMouseDown.bind(this);
         this.onMouseUp = this.onMouseUp.bind(this);
         this.onKeyDown = this.onKeyDown.bind(this);
+        this.onWheel = this.onWheel.bind(this);
 
         document.addEventListener('mousedown', this.onMouseDown, false);
         document.addEventListener('mouseup', this.onMouseUp, false);
         document.addEventListener('keydown', this.onKeyDown, false);
+        document.addEventListener('wheel', this.onWheel, { passive: false });
 
         // Emit initial grenade count
         if (this.onGrenadeChange) this.onGrenadeChange(this.grenadesLeft);
@@ -83,6 +85,16 @@ export default class WeaponSystem {
             this.switchWeapon(0);
         } else if (event.code === 'Digit2') {
             this.switchWeapon(1);
+        }
+    }
+
+    onWheel(event) {
+        if (this.isDead) return;
+        // deltaY > 0 means scroll down, deltaY < 0 means scroll up
+        if (event.deltaY > 0) {
+            this.switchWeapon(1);
+        } else if (event.deltaY < 0) {
+            this.switchWeapon(0);
         }
     }
 
