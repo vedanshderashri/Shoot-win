@@ -35,6 +35,11 @@ export default class Controls {
             case 'ShiftRight': this.keys.shift = true; break;
             case 'ControlLeft':
             case 'ControlRight': this.keys.crouch = true; break;
+            case 'KeyV':
+                if (window.gameEngine && window.gameEngine.localPlayer) {
+                    window.gameEngine.localPlayer.toggleCameraMode();
+                }
+                break;
         }
     }
 
@@ -56,8 +61,11 @@ export default class Controls {
         // Accept pointer lock on any element (game container or body)
         if (!document.pointerLockElement) return;
 
-        this.yawObject.rotation.y -= (event.movementX || 0) * 0.002;
-        this.pitchObject.rotation.x -= (event.movementY || 0) * 0.002;
+        const cameraMode = window.gameEngine?.localPlayer?.cameraMode || 'FPP';
+        const sensitivity = cameraMode === 'FPP' ? 0.002 : 0.0016;
+
+        this.yawObject.rotation.y -= (event.movementX || 0) * sensitivity;
+        this.pitchObject.rotation.x -= (event.movementY || 0) * sensitivity;
         this.pitchObject.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.pitchObject.rotation.x));
     }
 }

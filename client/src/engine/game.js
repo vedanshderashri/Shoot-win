@@ -39,6 +39,8 @@ class GameEngine {
 
         this.players = {};
         this.isInitialized = false;
+        this.ammoCrates = [];
+        this.nearestCrateDistance = 999;
     }
 
     init(container, roomCode, callbacks) {
@@ -75,7 +77,7 @@ class GameEngine {
         this.localPlayer = new PlayerModel(this.scene, this.camera, this.world, this.physicsMaterial, this.callbacks.onStaminaChange);
 
         // Setup Weapon System
-        this.weaponSystem = new WeaponSystem(this.scene, this.camera, this.socket, this.callbacks.onAmmoChange, this.callbacks.onHitmarker, this.callbacks.onGrenadeChange, this.callbacks.onWeaponChange);
+        this.weaponSystem = new WeaponSystem(this.scene, this.camera, this.socket, this.callbacks.onAmmoChange, this.callbacks.onHitmarker, this.callbacks.onGrenadeChange, this.callbacks.onWeaponChange, this.callbacks.onResupplyProgress);
 
         this.setupNetworkEvents();
 
@@ -253,6 +255,26 @@ class GameEngine {
         }
         // Animate map effects (fire, smoke, dust, snow, etc.)
         if (this.animateMap) this.animateMap(dt);
+
+        // Scan for nearest Ammo Crate proximity
+        if (this.localPlayer && this.ammoCrates && this.ammoCrates.length > 0) {
+            const playerPos = this.localPlayer.getPosition();
+            let minDistance = Infinity;
+
+            this.ammoCrates.forEach(crate => {
+                const d = playerPos.distanceTo(crate.position);
+                if (d < minDistance) {
+                    minDistance = d;
+                }
+            });
+
+            this.nearestCrateDistance = minDistance;
+
+            const canResupply = this.nearestCrateDistance <= 3.0;
+            if (this.callbacks.onCrateProximity) {
+                this.callbacks.onCrateProximity(canResupply);
+            }
+        }
     }
 
     joinRoom(code, name) {
@@ -317,6 +339,74 @@ class GameEngine {
                 break;
             }
         }
+
+        // Spawn Ammo Crates dynamically for this map layout
+        this.spawnAmmoCrates(selectedMap);
+    }
+
+    spawnAmmoCrates(mapName) {
+        // Clear any old crates
+        this.ammoCrates = [];
+
+        // Coordinates at ground level Y=0 (meshes will sit at Y=0.6)
+        const coords = {
+            warzone: [[0, 0, 0], [25, 0, -25], [-25, 0, 25]],
+            desert: [[0, 0, 0], [60, 0, -15], [-60, 0, 15]],
+            cqb: [[0, 0, 0], [15, 0, -15], [-15, 0, 15]],
+            arctic: [[0, 0, 0], [30, 0, -30], [-30, 0, 30]]
+        }[mapName] || [[0, 0, 0]];
+
+        coords.forEach(([x, y, z]) => {
+            // 1. Static Physics Body
+            const shape = new CANNON.Box(new CANNON.Vec3(0.75, 0.6, 0.75));
+            const body = new CANNON.Body({ mass: 0, material: this.physicsMaterial });
+            body.addShape(shape);
+            body.position.set(x, y + 0.6, z);
+            this.world.addBody(body);
+
+            // 2. High-Tech Visual Box Mesh
+            const crateGeo = new THREE.BoxGeometry(1.5, 1.2, 1.5);
+            const crateMat = new THREE.MeshStandardMaterial({ 
+                color: 0x1A3324, // Military green
+                metalness: 0.6, 
+                roughness: 0.25 
+            });
+            const crateMesh = new THREE.Mesh(crateGeo, crateMat);
+            crateMesh.position.set(x, y + 0.6, z);
+            crateMesh.castShadow = true;
+            crateMesh.receiveShadow = true;
+            crateMesh.userData.isObstacle = true;
+            crateMesh.name = 'env';
+            this.scene.add(crateMesh);
+
+            // 3. Green glowing top band
+            const bandGeo = new THREE.BoxGeometry(1.52, 0.1, 1.52);
+            const bandMat = new THREE.MeshBasicMaterial({ color: 0x00ff66 });
+            const bandMesh = new THREE.Mesh(bandGeo, bandMat);
+            bandMesh.position.set(x, y + 0.9, z);
+            this.scene.add(bandMesh);
+
+            // 4. Glowing green ring marker on the ground
+            const markerGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.02, 16);
+            const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.25 });
+            const markerMesh = new THREE.Mesh(markerGeo, markerMat);
+            markerMesh.position.set(x, y + 0.02, z);
+            this.scene.add(markerMesh);
+
+            // 5. Point light glow above crate
+            const glowLight = new THREE.PointLight(0x00ff66, 1.5, 6);
+            glowLight.position.set(x, y + 1.5, z);
+            this.scene.add(glowLight);
+
+            this.ammoCrates.push({
+                position: new THREE.Vector3(x, y, z),
+                mesh: crateMesh,
+                light: glowLight,
+                marker: markerMesh,
+                physicsBody: body
+            });
+        });
+        console.log(`[Resupply] Spawned ${this.ammoCrates.length} Ammo Crates dynamically for map: ${mapName.toUpperCase()}`);
     }
 
     createRoom(name, map) {

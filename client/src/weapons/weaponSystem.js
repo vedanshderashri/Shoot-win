@@ -4,14 +4,16 @@ import * as THREE from 'three';
 import sceneManager from '../engine/scene';
 import { Grenade } from './grenade';
 import { isMobile } from '../player/touchControls';
+import soundSystem from '../engine/soundSystem';
 
 export default class WeaponSystem {
-    constructor(scene, camera, socket, onAmmoChange, onHitmarker, onGrenadeChange, onWeaponChange) {
+    constructor(scene, camera, socket, onAmmoChange, onHitmarker, onGrenadeChange, onWeaponChange, onResupplyProgress) {
         this.scene = scene;
         this.camera = camera;
         this.socket = socket;
         this.onGrenadeChange = onGrenadeChange;
         this.onWeaponChange = onWeaponChange; // Callback to notify App.jsx of weapon changes
+        this.onResupplyProgress = onResupplyProgress; // Callback to notify App.jsx of reload timers
 
         this.rifle = new Rifle(scene, camera, socket, onAmmoChange, onHitmarker);
         this.sniper = new Sniper(scene, camera, socket, onAmmoChange, onHitmarker);
@@ -32,6 +34,11 @@ export default class WeaponSystem {
         this.switchTimer = 0;
         this.switchDuration = 0.22; // Smooth 220ms transit duration
         this.switchTargetIndex = -1;
+
+        // Ammo crate resupply parameters
+        this.isResupplying = false;
+        this.resupplyTimer = 0;
+        this.resupplyDuration = 5.0; // 5 seconds reload duration
 
         this.maxGrenades = 3;
         this.grenadesLeft = this.maxGrenades;
@@ -87,7 +94,7 @@ export default class WeaponSystem {
 
         // Update HUD
         if (this.currentWeapon.onAmmoChange) {
-            this.currentWeapon.onAmmoChange(this.currentWeapon.ammo);
+            this.currentWeapon.onAmmoChange(this.currentWeapon.ammo, this.currentWeapon.reserveAmmo);
         }
         if (this.onWeaponChange) {
             this.onWeaponChange(this.activeWeaponIndex === 0 ? 'Rifle' : 'Sniper');
@@ -95,7 +102,7 @@ export default class WeaponSystem {
     }
 
     onKeyDown(event) {
-        if (this.isDead) return;
+        if (this.isDead || this.isResupplying) return; // Block keyboard inputs when resupplying!
         if (event.code === 'KeyR') {
             this.currentWeapon.reload();
             // Reload grenades back to max
@@ -107,6 +114,10 @@ export default class WeaponSystem {
             this.switchWeapon(0);
         } else if (event.code === 'Digit2') {
             this.switchWeapon(1);
+        } else if (event.code === 'KeyL') {
+            if (window.gameEngine && window.gameEngine.nearestCrateDistance <= 3.0) {
+                this.startResupply();
+            }
         }
     }
 
@@ -118,6 +129,44 @@ export default class WeaponSystem {
         } else if (event.deltaY < 0) {
             this.switchWeapon(0);
         }
+    }
+
+    startResupply() {
+        if (this.isDead || this.isResupplying) return;
+
+        // Block resupplying if both guns have max ammo and max reserves!
+        if (this.rifle.ammo === this.rifle.maxAmmo && this.rifle.reserveAmmo === this.rifle.maxReserve &&
+            this.sniper.ammo === this.sniper.maxAmmo && this.sniper.reserveAmmo === this.sniper.maxReserve) {
+            console.log("[Resupply] Ammo is already fully secured!");
+            return;
+        }
+
+        this.isResupplying = true;
+        this.resupplyTimer = 0;
+
+        // Immediately cancel zoom/aim
+        this.currentWeapon.setAiming(false);
+        this.isAiming = false;
+
+        if (this.onResupplyProgress) {
+            this.onResupplyProgress(0);
+        }
+        console.log("[Resupply] Initiated 5-second Ammo resupply channel.");
+    }
+
+    resupplyRefill() {
+        this.rifle.ammo = this.rifle.maxAmmo;
+        this.rifle.reserveAmmo = this.rifle.maxReserve;
+        this.sniper.ammo = this.sniper.maxAmmo;
+        this.sniper.reserveAmmo = this.sniper.maxReserve;
+
+        soundSystem.playReloadSound();
+
+        // Update active weapon ammo HUD readings
+        if (this.currentWeapon.onAmmoChange) {
+            this.currentWeapon.onAmmoChange(this.currentWeapon.ammo, this.currentWeapon.reserveAmmo);
+        }
+        console.log("[Resupply] Finished Ammo resupply channel. Ammo refilled!");
     }
 
     onMouseDown(event) {
@@ -222,6 +271,13 @@ export default class WeaponSystem {
         if (this.currentWeapon) {
             this.currentWeapon.update(dt);
 
+            // Sync first-person weapon mesh visibility based on camera mode
+            const cameraMode = window.gameEngine?.localPlayer?.cameraMode || 'FPP';
+            const shouldShowFPWeapon = (cameraMode === 'FPP') && (this.switchState !== 'holstering') && !this.isDead;
+            if (this.currentWeapon.mesh) {
+                this.currentWeapon.mesh.visible = shouldShowFPWeapon;
+            }
+
             // Apply weapon switch visual offsets post-update
             if (this.switchState === 'holstering') {
                 this.switchTimer += dt;
@@ -246,10 +302,43 @@ export default class WeaponSystem {
             }
 
             if (!this.isDead && this.isMouseDown && (document.pointerLockElement || isMobile)) {
-                // Deny shooting during weapon transitions
-                if (this.switchState === 'idle') {
+                // Deny shooting during weapon transitions OR active ammo resupplies
+                if (this.switchState === 'idle' && !this.isResupplying) {
                     this.currentWeapon.shoot();
                 }
+            }
+        }
+
+        // Tick Ammo Crate Resupply logic
+        if (this.isResupplying) {
+            this.resupplyTimer += dt;
+            const progress = Math.min(100, (this.resupplyTimer / this.resupplyDuration) * 100);
+
+            if (this.onResupplyProgress) {
+                this.onResupplyProgress(progress);
+            }
+
+            // Interruption: Player ran away from the Ammo Crate!
+            if (window.gameEngine && window.gameEngine.nearestCrateDistance > 4.0) {
+                console.log("[Resupply] Interrupted: Player walked away from crate.");
+                this.isResupplying = false;
+                if (this.onResupplyProgress) {
+                    this.onResupplyProgress(-1); // Hide progress bar
+                }
+            }
+
+            // Finished resupply channel
+            if (this.resupplyTimer >= this.resupplyDuration) {
+                this.isResupplying = false;
+                this.resupplyRefill();
+                if (this.onResupplyProgress) {
+                    this.onResupplyProgress(100);
+                }
+                setTimeout(() => {
+                    if (this.onResupplyProgress) {
+                        this.onResupplyProgress(-1); // Hide progress bar
+                    }
+                }, 800);
             }
         }
 

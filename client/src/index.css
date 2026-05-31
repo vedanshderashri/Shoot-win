@@ -1697,4 +1697,93 @@ html {
   letter-spacing: 1px;
   color: var(--text-dim);
   text-transform: uppercase;
+}
+
+/* ════════ AMMO RESUPPLY HUD ════════ */
+.resupply-prompt {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 10, 0, 0.85);
+  border: 1px solid rgba(0, 255, 102, 0.4);
+  border-left: 4px solid #00ff66;
+  padding: 10px 24px;
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.15);
+  animation: blinkPrompt 1.8s ease infinite;
+  z-index: 20;
+}
+
+@keyframes blinkPrompt {
+  0%, 100% { border-color: rgba(0, 255, 102, 0.4); }
+  50% { border-color: #00ff66; }
+}
+
+.resupply-key {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: bold;
+  color: #00ff66;
+  background: rgba(0, 255, 102, 0.15);
+  border: 1px solid #00ff66;
+  padding: 2px 8px;
+}
+
+.resupply-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  color: var(--text-bright);
+}
+
+.resupply-channel-container {
+  position: absolute;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--mil-border);
+  padding: 14px 30px;
+  width: 320px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  z-index: 20;
+}
+
+.resupply-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #00ff66;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.resupply-bar-track {
+  width: 100%;
+  height: 10px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--mil-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.resupply-bar-fill {
+  height: 100%;
+  background: #00ff66;
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.6);
+  transition: width 0.1s linear;
+}
+
+.resupply-pct {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-bright);
 }

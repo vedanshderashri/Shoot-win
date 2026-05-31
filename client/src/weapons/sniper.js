@@ -27,6 +27,8 @@ export default class Sniper {
         this.lastShootTime = 0;
         this.maxAmmo = config.magazine;
         this.ammo = this.maxAmmo;
+        this.maxReserve = 15;
+        this.reserveAmmo = this.maxReserve;
         this.reloadTimeMs = config.reloadTimeSec * 1000;
 
         this.isReloading = false;
@@ -153,16 +155,20 @@ export default class Sniper {
     }
 
     reload() {
-        if (this.isReloading || this.ammo >= this.maxAmmo) return;
+        if (this.isReloading || this.ammo >= this.maxAmmo || this.reserveAmmo <= 0) return;
         this.isReloading = true;
 
         soundSystem.playReloadSound();
 
         // Sniper reloads slightly slower, let's simulate
         setTimeout(() => {
-            this.ammo = this.maxAmmo;
+            const needed = this.maxAmmo - this.ammo;
+            const amountToLoad = Math.min(needed, this.reserveAmmo);
+            this.reserveAmmo -= amountToLoad;
+            this.ammo += amountToLoad;
+
             this.isReloading = false;
-            if (this.onAmmoChange) this.onAmmoChange(this.ammo);
+            if (this.onAmmoChange) this.onAmmoChange(this.ammo, this.reserveAmmo);
         }, this.reloadTimeMs);
     }
 
@@ -178,7 +184,7 @@ export default class Sniper {
         this.lastShootTime = time;
 
         this.ammo--;
-        if (this.onAmmoChange) this.onAmmoChange(this.ammo);
+        if (this.onAmmoChange) this.onAmmoChange(this.ammo, this.reserveAmmo);
 
         this.playShootEffect();
         soundSystem.playShootSound();

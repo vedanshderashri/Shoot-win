@@ -27,6 +27,8 @@ export default class Rifle {
         this.lastShootTime = 0;
         this.maxAmmo = config.magazine;
         this.ammo = this.maxAmmo;
+        this.maxReserve = 90;
+        this.reserveAmmo = this.maxReserve;
         this.reloadTimeMs = config.reloadTimeSec * 1000;
 
         this.isReloading = false;
@@ -172,7 +174,7 @@ export default class Rifle {
     }
 
     reload() {
-        if (this.isReloading || this.ammo >= this.maxAmmo) return;
+        if (this.isReloading || this.ammo >= this.maxAmmo || this.reserveAmmo <= 0) return;
         this.isReloading = true;
 
         soundSystem.playReloadSound();
@@ -181,9 +183,13 @@ export default class Rifle {
         const reloadAnimDuration = this.reloadTimeMs;
 
         setTimeout(() => {
-            this.ammo = this.maxAmmo;
+            const needed = this.maxAmmo - this.ammo;
+            const amountToLoad = Math.min(needed, this.reserveAmmo);
+            this.reserveAmmo -= amountToLoad;
+            this.ammo += amountToLoad;
+
             this.isReloading = false;
-            if (this.onAmmoChange) this.onAmmoChange(this.ammo);
+            if (this.onAmmoChange) this.onAmmoChange(this.ammo, this.reserveAmmo);
         }, reloadAnimDuration);
     }
 
@@ -199,7 +205,7 @@ export default class Rifle {
         this.lastShootTime = time;
 
         this.ammo--;
-        if (this.onAmmoChange) this.onAmmoChange(this.ammo);
+        if (this.onAmmoChange) this.onAmmoChange(this.ammo, this.reserveAmmo);
 
         this.playShootEffect();
         soundSystem.playShootSound();

@@ -17,6 +17,9 @@ function App() {
     const [health, setHealth] = useState(100);
     const [stamina, setStamina] = useState(100);
     const [ammo, setAmmo] = useState(30);
+    const [reserveAmmo, setReserveAmmo] = useState(90);
+    const [canResupply, setCanResupply] = useState(false);
+    const [resupplyProgress, setResupplyProgress] = useState(-1);
     const [grenades, setGrenades] = useState(3);
     const [kills, setKills] = useState(0);
     const [deaths, setDeaths] = useState(0);
@@ -40,14 +43,16 @@ function App() {
         onHealthChange: (hp) => { setHealth(hp); setTookDamage(true); setTimeout(() => setTookDamage(false), 300); },
         onKill: () => setKills(prev => prev + 1),
         onDeath: () => setDeaths(prev => prev + 1),
-        onAmmoChange: (a) => setAmmo(a),
+        onAmmoChange: (a, r) => { setAmmo(a); if (r !== undefined) setReserveAmmo(r); },
         onGrenadeChange: (g) => setGrenades(g),
         onHitmarker: (headshot) => { setIsHeadshot(headshot); setShowHitmarker(true); setTimeout(() => setShowHitmarker(false), 200); },
         onStaminaChange: (s) => setStamina(s),
         onKillFeed: (msg) => displayKillFeed(msg),
         onScoresUpdate: (s) => setScores(s),
         onGameOver: (data) => { setWinnerData(data); setScreen('gameover'); document.exitPointerLock(); },
-        onWeaponChange: (w) => setActiveWeapon(w)
+        onWeaponChange: (w) => setActiveWeapon(w),
+        onCrateProximity: (near) => setCanResupply(near),
+        onResupplyProgress: (prog) => setResupplyProgress(prog)
     };
 
     const startGame = (code) => { setRoomCode(code); setScreen('playing'); };
@@ -374,7 +379,7 @@ function App() {
                         <div className="ammo-readout">
                             <div className="ammo-mag">{String(ammo).padStart(2, '0')}</div>
                             <div className="ammo-sep">/</div>
-                            <div className="ammo-reserve">{activeWeapon === 'Rifle' ? '30' : '05'}</div>
+                            <div className="ammo-reserve">{String(reserveAmmo).padStart(2, '0')}</div>
                         </div>
                         {!isMobile && (
                             <div className="ammo-bullets">
@@ -403,6 +408,39 @@ function App() {
 
                     {/* Scoreboard overlay */}
                     <Scoreboard visible={showScoreboard} players={scores.length > 0 ? scores : [{ name: playerName || 'You', kills, deaths }]} />
+
+                    {/* Ammo Crate Resupply HUD Elements */}
+                    {canResupply && resupplyProgress === -1 && (
+                        <div 
+                            className="resupply-prompt"
+                            style={isMobile ? { cursor: 'pointer' } : {}}
+                            onClick={() => {
+                                if (isMobile && window.gameEngine?.weaponSystem) {
+                                    window.gameEngine.weaponSystem.startResupply();
+                                }
+                            }}
+                            onTouchStart={() => {
+                                if (isMobile && window.gameEngine?.weaponSystem) {
+                                    window.gameEngine.weaponSystem.startResupply();
+                                }
+                            }}
+                        >
+                            <span className="resupply-key">{isMobile ? 'TAP' : 'L'}</span>
+                            <span className="resupply-text">SECURE AMMUNITION</span>
+                        </div>
+                    )}
+
+                    {resupplyProgress !== -1 && (
+                        <div className="resupply-channel-container">
+                            <div className="resupply-title">
+                                {resupplyProgress === 100 ? 'AMMUNITION SECURED' : 'SECURING SUPPLIES...'}
+                            </div>
+                            <div className="resupply-bar-track">
+                                <div className="resupply-bar-fill" style={{ width: `${resupplyProgress}%` }}></div>
+                            </div>
+                            <div className="resupply-pct">{Math.round(resupplyProgress)}%</div>
+                        </div>
+                    )}
 
                     {/* ── Mobile Touch Buttons ── */}
                     {isMobile && (
