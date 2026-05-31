@@ -12,6 +12,7 @@ export default class Soldier {
         this.targetRotation = 0;
         this.hasInitializedPositions = false;
         this.muzzleFlash = null;
+        this.lastFrameY = 0;
 
         // A hidden hitbox for raycasting compat (headshots check localHit.y > 0.6)
         // By using this hitbox, we ensure game.js can synchronously assign userData.id
@@ -153,7 +154,7 @@ export default class Soldier {
         }
     }
 
-    animate(isMoving, dt) {
+     animate(isMoving, dt) {
         if (!this.isLoaded || !this.mixer) return;
 
         this.mixer.update(dt);
@@ -165,6 +166,25 @@ export default class Soldier {
         let diff = this.targetRotation - this.group.rotation.y;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
         this.group.rotation.y += diff * dt * 15;
+
+        // Calculate visual Y velocity to trigger procedural jump lean/bobs
+        const yVelocity = dt > 0 ? (this.group.position.y - this.lastFrameY) / dt : 0;
+        this.lastFrameY = this.group.position.y;
+
+        let targetModelY = -1.6;
+        let targetModelRotX = 0;
+
+        if (Math.abs(yVelocity) > 0.45) {
+            // Ascending or descending in the air (jumping)
+            targetModelY = -1.45; // Pull legs up slightly
+            targetModelRotX = yVelocity > 0 ? -0.15 : 0.1; // Lean forward when rising, lean back when falling
+        }
+
+        // Smoothly lerp model Y offset and tilt
+        if (this.model) {
+            this.model.position.y = THREE.MathUtils.lerp(this.model.position.y, targetModelY, dt * 12);
+            this.model.rotation.x = THREE.MathUtils.lerp(this.model.rotation.x, targetModelRotX, dt * 12);
+        }
 
         // Decay muzzle flash if alive
         if (this.muzzleFlash && this.muzzleFlash.intensity > 0) {
@@ -196,12 +216,13 @@ export default class Soldier {
         this.muzzleFlash.intensity = 5;
     }
 
-    updatePosition(x, y, z, rotation) {
+     updatePosition(x, y, z, rotation) {
         if (!this.hasInitializedPositions) {
             this.group.position.set(x, y, z);
             this.group.rotation.y = rotation;
             this.targetPosition.copy(this.group.position);
             this.targetRotation = rotation;
+            this.lastFrameY = y;
             this.hasInitializedPositions = true;
             return;
         }

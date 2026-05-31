@@ -27,6 +27,12 @@ export default class WeaponSystem {
         this.isAiming = false;
         this.isDead = false;
 
+        // Weapon switch animation parameters
+        this.switchState = 'idle'; // 'idle', 'holstering', 'equipping'
+        this.switchTimer = 0;
+        this.switchDuration = 0.22; // Smooth 220ms transit duration
+        this.switchTargetIndex = -1;
+
         this.maxGrenades = 3;
         this.grenadesLeft = this.maxGrenades;
         this.activeGrenades = [];
@@ -47,8 +53,19 @@ export default class WeaponSystem {
 
     switchWeapon(index) {
         if (this.isDead || index === this.activeWeaponIndex || index < 0 || index >= this.weapons.length) return;
+        if (this.switchState !== 'idle') return; // Ignore if already switching
 
-        // Hide current weapon and reset its aiming state
+        this.switchState = 'holstering';
+        this.switchTimer = 0;
+        this.switchTargetIndex = index;
+        
+        // Immediately disable aiming during switches
+        this.currentWeapon.setAiming(false);
+        this.isAiming = false;
+    }
+
+    completeHolster() {
+        // Hide previous weapon
         this.currentWeapon.mesh.visible = false;
         this.currentWeapon.setAiming(false);
 
@@ -56,14 +73,19 @@ export default class WeaponSystem {
         this.camera.fov = this.currentWeapon.baseFov;
         this.camera.updateProjectionMatrix();
 
-        // Switch to new weapon
-        this.activeWeaponIndex = index;
+        // Equip new weapon
+        this.activeWeaponIndex = this.switchTargetIndex;
         this.currentWeapon = this.weapons[this.activeWeaponIndex];
         this.currentWeapon.mesh.visible = true;
+        this.currentWeapon.setAiming(false);
 
-        console.log(`Switched to weapon index ${index}: ${this.activeWeaponIndex === 0 ? 'Assault Rifle' : 'Sniper Rifle'}`);
+        // Transition to equipping
+        this.switchState = 'equipping';
+        this.switchTimer = 0;
 
-        // Update HUD callbacks
+        console.log(`Weapon switch completed: slot ${this.activeWeaponIndex}`);
+
+        // Update HUD
         if (this.currentWeapon.onAmmoChange) {
             this.currentWeapon.onAmmoChange(this.currentWeapon.ammo);
         }
@@ -200,8 +222,34 @@ export default class WeaponSystem {
         if (this.currentWeapon) {
             this.currentWeapon.update(dt);
 
+            // Apply weapon switch visual offsets post-update
+            if (this.switchState === 'holstering') {
+                this.switchTimer += dt;
+                const progress = Math.min(1, this.switchTimer / this.switchDuration);
+                // Ease out: slide down and pivot forward
+                this.currentWeapon.mesh.position.y -= progress * 0.4;
+                this.currentWeapon.mesh.rotation.x -= progress * 0.55;
+
+                if (this.switchTimer >= this.switchDuration) {
+                    this.completeHolster();
+                }
+            } else if (this.switchState === 'equipping') {
+                this.switchTimer += dt;
+                const progress = Math.min(1, this.switchTimer / this.switchDuration);
+                // Ease in: slide up from bottom and pivot back up
+                this.currentWeapon.mesh.position.y -= (1 - progress) * 0.4;
+                this.currentWeapon.mesh.rotation.x -= (1 - progress) * 0.55;
+
+                if (this.switchTimer >= this.switchDuration) {
+                    this.switchState = 'idle';
+                }
+            }
+
             if (!this.isDead && this.isMouseDown && (document.pointerLockElement || isMobile)) {
-                this.currentWeapon.shoot();
+                // Deny shooting during weapon transitions
+                if (this.switchState === 'idle') {
+                    this.currentWeapon.shoot();
+                }
             }
         }
 

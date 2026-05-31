@@ -85,6 +85,12 @@ export default class Movement {
             this.body.velocity.z *= 0.5;
         }
 
+        // Clamp maximum upward Y velocity to prevent slope launching / unintended collision high jumps
+        const maxUpwardVel = this.jumpVelocity + 0.1;
+        if (this.body.velocity.y > maxUpwardVel) {
+            this.body.velocity.y = maxUpwardVel;
+        }
+
         // Camera height: lower when crouching
         const targetEyeY = this.isCrouching ? 0.9 : 1.6;
         const currentEyeY = this.yawObject.position.y - this.body.position.y;
